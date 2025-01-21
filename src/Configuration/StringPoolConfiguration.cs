@@ -1,7 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using RustAnalyzer.src.StringPool.Interfaces;
 using RustAnalyzer.src.Services;
+using RustAnalyzer.Utils;
+using RustAnalyzer.src.Models.StringPool;
 
 namespace RustAnalyzer.src.Configuration
 {
@@ -9,6 +13,8 @@ namespace RustAnalyzer.src.Configuration
     {
         private static IStringPoolProvider? _currentProvider;
         private static Dictionary<string, uint> _toNumber = new();
+        private static readonly Dictionary<(string TypeName, string PropertyName), PropertyConfig> PropertyConfigs = new();
+        private static readonly Dictionary<(string TypeName, string MethodName), MethodConfig> MethodConfigs = new();
 
         public static void Initialize(IStringPoolProvider provider)
         {
@@ -21,6 +27,8 @@ namespace RustAnalyzer.src.Configuration
             {
                 _currentProvider = provider;
                 _toNumber = provider.GetToNumber();
+                InitializePropertyConfigs();
+                InitializeMethodConfigs();
             }
             catch (Exception)
             {
@@ -29,8 +37,129 @@ namespace RustAnalyzer.src.Configuration
             }
         }
 
+        private static void InitializePropertyConfigs()
+        {
+            var configs = new List<PropertyConfig>
+            {
+                new PropertyConfig("BaseNetworkable", "PrefabName", PrefabNameCheckType.FullPath),
+                new PropertyConfig("BaseNetworkable", "ShortPrefabName", PrefabNameCheckType.ShortName),
+                new PropertyConfig("ItemDefinition", "shortname", PrefabNameCheckType.ShortName)
+            };
+
+            foreach (var config in configs)
+            {
+                PropertyConfigs[(config.TypeName, config.PropertyName)] = config;
+            }
+        }
+
+        private static void InitializeMethodConfigs()
+        {
+            var configs = new List<MethodConfig>
+            {
+                new MethodConfig("GameManager", "CreateEntity", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("BaseEntity", "Spawn", new List<int>(), PrefabNameCheckType.FullPath),
+                new MethodConfig("PrefabAttribute", "server", new List<int>(), PrefabNameCheckType.FullPath),
+                new MethodConfig("PrefabAttribute", "client", new List<int>(), PrefabNameCheckType.FullPath),
+                new MethodConfig("GameManifest", "PathToStringID", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("StringPool", "Add", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("GameManager", "FindPrefab", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("ItemManager", "CreateByName", new List<int> { 0 }, PrefabNameCheckType.ShortName),
+                new MethodConfig("ItemManager", "FindItemDefinition", new List<int> { 0 }, PrefabNameCheckType.ShortName),
+                new MethodConfig("GameManager", "LoadPrefab", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("PrefabAttribute", "Find", new List<int> { 0 }, PrefabNameCheckType.FullPath),
+                new MethodConfig("StringPool", "Get", new List<int> { 0 }, PrefabNameCheckType.FullPath)
+            };
+
+            foreach (var config in configs)
+            {
+                MethodConfigs[(config.TypeName, config.MethodName)] = config;
+            }
+        }
+
+        public static bool IsValidShortName(string shortName)
+        {
+            shortName = shortName.ToLowerInvariant().Trim();
+            Console.WriteLine($"[RustAnalyzer] Checking short name '{shortName}' against {_toNumber.Count} items");
+            
+            if (_toNumber.Count == 0)
+            {
+                Console.WriteLine("[RustAnalyzer] Warning: StringPoolConfiguration.ToNumber is empty!");
+                return true; // Временно разрешаем все значения, если конфигурация пуста
+            }
+            
+            Console.WriteLine($"[RustAnalyzer] Available short names: {string.Join(", ", _toNumber.Keys.Select(k => Path.GetFileNameWithoutExtension(k)))}");
+            
+            foreach (var prefabName in _toNumber.Keys)
+            {
+                var sn = Path.GetFileNameWithoutExtension(prefabName);
+                if (sn.Equals(shortName, StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine($"[RustAnalyzer] Found match: {sn} = {shortName}");
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public static bool IsValidPrefabPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+                return false;
+
+            path = path.ToLowerInvariant().Replace("\\", "/").Trim();
+            return _toNumber.ContainsKey(path);
+        }
+
+        public static IEnumerable<string> FindSimilarShortNames(string shortName)
+        {
+            shortName = shortName.ToLowerInvariant();
+
+            var allShortNames = _toNumber.Keys
+                .Select(p => Path.GetFileNameWithoutExtension(p))
+                .Distinct()
+                .ToList();
+
+            var exactMatches = allShortNames
+                .Where(sn => sn.Contains(shortName) || shortName.Contains(sn))
+                .Take(3);
+
+            if (exactMatches.Any())
+            {
+                return exactMatches;
+            }
+
+            return allShortNames
+                .Select(sn => new { ShortName = sn, Distance = StringDistance.GetLevenshteinDistance(sn, shortName) })
+                .Where(x => x.Distance <= Math.Min(3, shortName.Length / 2))
+                .OrderBy(x => x.Distance)
+                .Take(3)
+                .Select(x => x.ShortName);
+        }
+
+        public static IEnumerable<string> FindSimilarPrefabs(string invalidPath)
+        {
+            invalidPath = invalidPath.ToLowerInvariant().Replace("\\", "/").Trim();
+
+            return _toNumber.Keys
+                .Select(p => new { Path = p, Distance = StringDistance.GetLevenshteinDistance(p, invalidPath) })
+                .Where(x => x.Distance <= 5)
+                .OrderBy(x => x.Distance)
+                .Take(3)
+                .Select(x => x.Path);
+        }
+
         public static string? CurrentVersion => _currentProvider?.Version;
 
         public static Dictionary<string, uint> ToNumber => _toNumber;
+        
+        public static PropertyConfig? GetPropertyConfig(string typeName, string propertyName)
+        {
+            return PropertyConfigs.TryGetValue((typeName, propertyName), out var config) ? config : null;
+        }
+        
+        public static MethodConfig? GetMethodConfig(string typeName, string methodName)
+        {
+            return MethodConfigs.TryGetValue((typeName, methodName), out var config) ? config : null;
+        }
     }
 } 
