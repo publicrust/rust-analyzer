@@ -89,7 +89,7 @@ namespace RustAnalyzer.Utils
                 .OrderByDescending(r => r.Type)
                 .ThenByDescending(r => r.Score)
                 .Take(maxSuggestions)
-                .DistinctBy(r => r.ToString());
+                .Distinct(new MatchResultComparer());
         }
 
         /// <summary>
@@ -107,14 +107,38 @@ namespace RustAnalyzer.Utils
             var candidateWords = candidate.Split(new[] { '.', '_', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
             int score = 0;
+
+            // Проверяем точное совпадение префикса
+            if (candidate.StartsWith(input, StringComparison.OrdinalIgnoreCase))
+            {
+                score += 50; // Высокий приоритет для префиксных совпадений
+            }
+
+            // Проверяем вхождение как подстроки
+            if (candidate.IndexOf(input, StringComparison.OrdinalIgnoreCase) >= 0)
+            {
+                score += 30;
+            }
+
+            // Проверяем совпадения по словам
             foreach (var inputWord in inputWords)
             {
                 foreach (var candidateWord in candidateWords)
                 {
-                    if (candidateWord.Contains(inputWord) || inputWord.Contains(candidateWord))
+                    // Точное совпадение слова
+                    if (string.Equals(inputWord, candidateWord, StringComparison.OrdinalIgnoreCase))
                     {
-                        // Более длинные совпадения получают больший вес
-                        score += Math.Min(inputWord.Length, candidateWord.Length) * 10;
+                        score += inputWord.Length * 15;
+                    }
+                    // Слово является префиксом
+                    else if (candidateWord.StartsWith(inputWord, StringComparison.OrdinalIgnoreCase))
+                    {
+                        score += inputWord.Length * 10;
+                    }
+                    // Слово содержится внутри
+                    else if (candidateWord.IndexOf(inputWord, StringComparison.OrdinalIgnoreCase) >= 0)
+                    {
+                        score += inputWord.Length * 5;
                     }
                 }
             }
@@ -129,19 +153,24 @@ namespace RustAnalyzer.Utils
             var candidateParts = candidate.Split(new[] { '.', '_', ' ' }, StringSplitOptions.RemoveEmptyEntries);
 
             int score = 0;
+
+            // Проверяем общие части слов
             foreach (var inputPart in inputParts)
             {
                 foreach (var candidatePart in candidateParts)
                 {
-                    // Проверяем совпадение начала или конца слова
-                    if (candidatePart.StartsWith(inputPart) || candidatePart.EndsWith(inputPart))
+                    // Общий префикс
+                    var commonPrefix = GetCommonPrefix(inputPart, candidatePart, ignoreCase: true);
+                    if (commonPrefix.Length >= 2) // Минимум 2 символа
                     {
-                        score += inputPart.Length * 5;
+                        score += commonPrefix.Length * 4;
                     }
-                    // Проверяем совпадение части слова
-                    else if (candidatePart.Contains(inputPart))
+
+                    // Общий суффикс
+                    var commonSuffix = GetCommonSuffix(inputPart, candidatePart, ignoreCase: true);
+                    if (commonSuffix.Length >= 2) // Минимум 2 символа
                     {
-                        score += inputPart.Length * 3;
+                        score += commonSuffix.Length * 3;
                     }
                 }
             }
@@ -149,11 +178,52 @@ namespace RustAnalyzer.Utils
             return score;
         }
 
-        private enum MatchType
+        private static string GetCommonPrefix(string str1, string str2, bool ignoreCase)
+        {
+            var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            int minLength = Math.Min(str1.Length, str2.Length);
+            int i;
+            for (i = 0; i < minLength; i++)
+            {
+                if (!str1[i].ToString().Equals(str2[i].ToString(), comparison))
+                    break;
+            }
+            return str1.Substring(0, i);
+        }
+
+        private static string GetCommonSuffix(string str1, string str2, bool ignoreCase)
+        {
+            var comparison = ignoreCase ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            int minLength = Math.Min(str1.Length, str2.Length);
+            int i;
+            for (i = 0; i < minLength; i++)
+            {
+                if (!str1[str1.Length - 1 - i].ToString().Equals(str2[str2.Length - 1 - i].ToString(), comparison))
+                    break;
+            }
+            return i > 0 ? str1.Substring(str1.Length - i) : string.Empty;
+        }
+
+        public enum MatchType
         {
             WordMatch = 3,    // Точное совпадение слов
             PartialMatch = 2, // Частичное совпадение
             Levenshtein = 1   // Похожие по расстоянию Левенштейна
+        }
+
+        private class MatchResultComparer : IEqualityComparer<MatchResult>
+        {
+            public bool Equals(MatchResult x, MatchResult y)
+            {
+                if (ReferenceEquals(x, y)) return true;
+                if (x is null || y is null) return false;
+                return x.ToString() == y.ToString();
+            }
+
+            public int GetHashCode(MatchResult obj)
+            {
+                return obj?.ToString().GetHashCode() ?? 0;
+            }
         }
     }
 } 

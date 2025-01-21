@@ -99,7 +99,7 @@ namespace RustAnalyzer
             
             // Получаем похожие хуки Rust и плагинов
             var candidates = HooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                .Select(s => (s, "rust"))
+                .Select(s => (s, string.Empty))
                 .Concat(PluginHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
                     .Select(s => (s.hookName, $"(from plugin: {s.pluginName})")))
                 .Concat(UnityHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
