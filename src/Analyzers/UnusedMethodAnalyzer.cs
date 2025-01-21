@@ -101,7 +101,7 @@ namespace RustAnalyzer
             var similarHooks = HooksConfiguration.GetSimilarHooks(methodSymbol, 3)
                 .Select(s => s.ToString())
                 .Concat(PluginHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                    .Select(s => $"{s.hookName} (from plugin: {s.pluginName})"))
+                    .Select(s => $"{s.hookName}({string.Join(", ", GetHookParameters(s.hookName))}) (from plugin: {s.pluginName})"))
                 .Concat(UnityHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
                     .Select(s => s.ToString()));
 
@@ -120,6 +120,15 @@ namespace RustAnalyzer
             {
                 ReportDiagnostic(context, methodSymbol, MessageFormat, methodSymbol.Name);
             }
+        }
+
+        private static IEnumerable<string> GetHookParameters(string hookName)
+        {
+            var hook = PluginHooksConfiguration.GetPluginInfo(hookName);
+            if (hook == null)
+                return Enumerable.Empty<string>();
+
+            return hook.HookParameters.Select(p => p.Type);
         }
 
         /// <summary>

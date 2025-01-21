@@ -23,7 +23,8 @@ namespace RustAnalyzer.Models
 
         public override string ToString()
         {
-            return $"{HookName}({string.Join(", ", HookParameters)})";
+            var parameters = string.Join(", ", HookParameters.Select(p => p.Type));
+            return $"{HookName}({parameters})";
         }
     }
 }
