@@ -98,16 +98,22 @@ namespace RustAnalyzer
 
             
             // Получаем похожие хуки из всех источников
-            var similarHooks = HooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                .Select(s => s.ToString())
-                .Concat(PluginHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                    .Select(s => $"{s.hookName}({string.Join(", ", GetHookParameters(s.hookName))}) (from plugin: {s.pluginName})"))
-                .Concat(UnityHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                    .Select(s => s.ToString()));
+            var similarHooks = HooksConfiguration.GetSimilarHooks(methodSymbol)
+                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})");
 
-            if (similarHooks.Any())
+            var similarPluginHooks = PluginHooksConfiguration.GetSimilarHooks(methodSymbol)
+                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))}) (from plugin: {h.PluginName})");
+
+            var similarUnityHooks = UnityHooksConfiguration.GetSimilarHooks(methodSymbol)
+                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})");
+
+            var allSimilarHooks = similarHooks
+                .Concat(similarPluginHooks)
+                .Concat(similarUnityHooks);
+
+            if (allSimilarHooks.Any())
             {
-                var suggestionsText = string.Join(", ", similarHooks);
+                var suggestionsText = string.Join(", ", allSimilarHooks);
 
                 ReportDiagnostic(
                     context,

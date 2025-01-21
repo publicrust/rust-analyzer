@@ -70,16 +70,15 @@ namespace RustAnalyzer
         /// <summary>
         /// Returns hooks with similar names to the method.
         /// </summary>
-        public static IEnumerable<string> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
+        public static IEnumerable<HookModel> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
         {
             if (method == null || method.ContainingType == null ||
                 !HooksUtils.IsUnityClass(method.ContainingType))
-                return Enumerable.Empty<string>();
+                return Enumerable.Empty<HookModel>();
 
-            return StringDistance.FindSimilarShortNames(
-                method.Name,
-                _hooks.Select(h => h.HookName).Distinct(),
-                maxSuggestions);
+            var candidates = _hooks.Select(h => (text: h.HookName, context: h));
+            return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
+                .Select(r => r.Context);
         }
     }
 }

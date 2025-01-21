@@ -7,43 +7,21 @@ namespace RustAnalyzer.Utils
     public static class StringSimilarity
     {
         /// <summary>
-        /// Represents a match result with its source context
-        /// </summary>
-        public class MatchResult
-        {
-            public string Text { get; }
-            public string Context { get; }
-            public int Score { get; }
-            public MatchType Type { get; }
-
-            public MatchResult(string text, string context, int score, MatchType type)
-            {
-                Text = text;
-                Context = context;
-                Score = score;
-                Type = type;
-            }
-
-            public override string ToString() => 
-                string.IsNullOrEmpty(Context) ? Text : $"{Text} {Context}";
-        }
-
-        /// <summary>
         /// Finds similar strings using multiple strategies:
         /// 1. Exact word matches (e.g. "OnDispenser" matches "OnDispenserBonus")
         /// 2. Word part matches (e.g. "metal.1" matches "metal", "metal1")
         /// 3. Levenshtein distance for typos
         /// </summary>
-        public static IEnumerable<MatchResult> FindSimilarWithContext(
+        public static IEnumerable<MatchResult<T>> FindSimilarWithContext<T>(
             string input,
-            IEnumerable<(string text, string context)> candidates,
+            IEnumerable<(string text, T context)> candidates,
             int maxSuggestions = 3)
         {
             if (string.IsNullOrEmpty(input) || !candidates.Any())
-                return Enumerable.Empty<MatchResult>();
+                return Enumerable.Empty<MatchResult<T>>();
 
             input = input.ToLowerInvariant();
-            var results = new List<MatchResult>();
+            var results = new List<MatchResult<T>>();
 
             // 1. Поиск точных совпадений слов
             foreach (var (text, context) in candidates)
@@ -51,7 +29,7 @@ namespace RustAnalyzer.Utils
                 var score = CalculateWordMatchScore(input, text.ToLowerInvariant());
                 if (score > 0)
                 {
-                    results.Add(new MatchResult(text, context, score, MatchType.WordMatch));
+                    results.Add(new MatchResult<T>(text, context, score, MatchType.WordMatch));
                 }
             }
 
@@ -63,7 +41,7 @@ namespace RustAnalyzer.Utils
                     var score = CalculatePartialMatchScore(input, text.ToLowerInvariant());
                     if (score > 0)
                     {
-                        results.Add(new MatchResult(text, context, score, MatchType.PartialMatch));
+                        results.Add(new MatchResult<T>(text, context, score, MatchType.PartialMatch));
                     }
                 }
             }
@@ -79,7 +57,7 @@ namespace RustAnalyzer.Utils
                     if (distance <= maxDistance)
                     {
                         var score = 100 - (distance * 100 / Math.Max(input.Length, text.Length));
-                        results.Add(new MatchResult(text, context, score, MatchType.Levenshtein));
+                        results.Add(new MatchResult<T>(text, context, score, MatchType.Levenshtein));
                     }
                 }
             }
@@ -89,7 +67,7 @@ namespace RustAnalyzer.Utils
                 .OrderByDescending(r => r.Type)
                 .ThenByDescending(r => r.Score)
                 .Take(maxSuggestions)
-                .Distinct(new MatchResultComparer());
+                .Distinct(new MatchResultComparer<T>());
         }
 
         /// <summary>
@@ -99,6 +77,27 @@ namespace RustAnalyzer.Utils
         {
             return FindSimilarWithContext(input, candidates.Select(c => (c, string.Empty)), maxSuggestions)
                 .Select(r => r.Text);
+        }
+
+        /// <summary>
+        /// Represents a match result with its source context
+        /// </summary>
+        public class MatchResult<T>
+        {
+            public string Text { get; }
+            public T Context { get; }
+            public int Score { get; }
+            public MatchType Type { get; }
+
+            public MatchResult(string text, T context, int score, MatchType type)
+            {
+                Text = text;
+                Context = context;
+                Score = score;
+                Type = type;
+            }
+
+            public override string ToString() => Text;
         }
 
         private static int CalculateWordMatchScore(string input, string candidate)
@@ -211,16 +210,16 @@ namespace RustAnalyzer.Utils
             Levenshtein = 1   // Похожие по расстоянию Левенштейна
         }
 
-        private class MatchResultComparer : IEqualityComparer<MatchResult>
+        private class MatchResultComparer<T> : IEqualityComparer<MatchResult<T>>
         {
-            public bool Equals(MatchResult x, MatchResult y)
+            public bool Equals(MatchResult<T> x, MatchResult<T> y)
             {
                 if (ReferenceEquals(x, y)) return true;
                 if (x is null || y is null) return false;
                 return x.ToString() == y.ToString();
             }
 
-            public int GetHashCode(MatchResult obj)
+            public int GetHashCode(MatchResult<T> obj)
             {
                 return obj?.ToString().GetHashCode() ?? 0;
             }

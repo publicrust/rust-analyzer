@@ -73,15 +73,15 @@ namespace RustAnalyzer
         /// <summary>
         /// Returns hooks with similar names to the method along with their plugin sources.
         /// </summary>
-        public static IEnumerable<(string hookName, string pluginName)> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
+        public static IEnumerable<PluginHookModel> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
         {
             if (method == null || method.ContainingType == null ||
                 !HooksUtils.IsRustClass(method.ContainingType))
-                return Enumerable.Empty<(string, string)>();
+                return Enumerable.Empty<PluginHookModel>();
 
-            var candidates = _hooks.Select(h => (text: h.HookName, context: h.PluginName));
+            var candidates = _hooks.Select(h => (text: h.HookName, context: h));
             return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
-                .Select(r => (r.Text, r.Context));
+                .Select(r => r.Context);
         }
 
         /// <summary>
