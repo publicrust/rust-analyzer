@@ -3,6 +3,7 @@ using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer;
+using RustAnalyzer.src.Configuration;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -351,7 +352,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
         private bool IsValidShortName(string shortName)
         {
             shortName = shortName.ToLowerInvariant().Trim();
-            foreach (var prefabName in StringPool.toNumber.Keys)
+            foreach (var prefabName in StringPoolConfiguration.ToNumber.Keys)
             {
                 var sn = Path.GetFileNameWithoutExtension(prefabName);
                 if (sn.Equals(shortName, StringComparison.OrdinalIgnoreCase))
@@ -368,7 +369,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
                 return false;
 
             path = path.ToLowerInvariant().Replace("\\", "/").Trim();
-            return StringPool.toNumber.ContainsKey(path);
+            return StringPoolConfiguration.ToNumber.ContainsKey(path);
         }
 
         private string GetSuggestionMessage(string invalidPath)
@@ -388,7 +389,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
         {
             invalidPath = invalidPath.ToLowerInvariant().Replace("\\", "/").Trim();
 
-            return StringPool.toNumber.Keys
+            return StringPoolConfiguration.ToNumber.Keys
                 .Select(p => new { Path = p, Distance = GetLevenshteinDistance(p, invalidPath) })
                 .Where(x => x.Distance <= 5)
                 .OrderBy(x => x.Distance)
@@ -400,7 +401,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
         {
             shortName = shortName.ToLowerInvariant();
 
-            return StringPool.toNumber.Keys
+            return StringPoolConfiguration.ToNumber.Keys
                 .Select(p => Path.GetFileNameWithoutExtension(p))
                 .Distinct()
                 .Select(sn => new { ShortName = sn, Distance = GetLevenshteinDistance(sn, shortName) })
