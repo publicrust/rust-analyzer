@@ -113,39 +113,13 @@ namespace RustAnalyzer.src.Configuration
         public static IEnumerable<string> FindSimilarShortNames(string shortName)
         {
             shortName = shortName.ToLowerInvariant();
-
-            var allShortNames = _toNumber.Keys
-                .Select(p => Path.GetFileNameWithoutExtension(p))
-                .Distinct()
-                .ToList();
-
-            var exactMatches = allShortNames
-                .Where(sn => sn.Contains(shortName) || shortName.Contains(sn))
-                .Take(3);
-
-            if (exactMatches.Any())
-            {
-                return exactMatches;
-            }
-
-            return allShortNames
-                .Select(sn => new { ShortName = sn, Distance = StringDistance.GetLevenshteinDistance(sn, shortName) })
-                .Where(x => x.Distance <= Math.Min(3, shortName.Length / 2))
-                .OrderBy(x => x.Distance)
-                .Take(3)
-                .Select(x => x.ShortName);
+            return StringDistance.FindSimilarShortNames(shortName, _toNumber.Keys);
         }
 
         public static IEnumerable<string> FindSimilarPrefabs(string invalidPath)
         {
             invalidPath = invalidPath.ToLowerInvariant().Replace("\\", "/").Trim();
-
-            return _toNumber.Keys
-                .Select(p => new { Path = p, Distance = StringDistance.GetLevenshteinDistance(p, invalidPath) })
-                .Where(x => x.Distance <= 5)
-                .OrderBy(x => x.Distance)
-                .Take(3)
-                .Select(x => x.Path);
+            return StringDistance.FindSimilarPrefabs(invalidPath, _toNumber.Keys);
         }
 
         public static string? CurrentVersion => _currentProvider?.Version;
