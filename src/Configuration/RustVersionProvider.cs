@@ -1,23 +1,23 @@
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.src.Configuration;
-using RustAnalyzer.src.Hooks.Services;
+using RustAnalyzer.src.Services;
 using System;
 
 namespace RustAnalyzer.Configuration
 {
     public static class RustVersionProvider
     {
-        private static string _version = "unknown";
-        private static bool _isInitialized = false;
+        private static string _version = "LastVersion";
+        private static bool _isInitialized;
+
+        public static bool IsInitialized => _isInitialized;
 
         public static void Initialize(AnalyzerConfigOptions options)
         {
-            Console.WriteLine("[RustAnalyzer] Starting initialization...");
-            
-            if (!options.TryGetValue("build_property.rustversion", out var version))
+            if (!options.TryGetValue("build_property.RustVersion", out var version))
             {
-                return;
+                version = "LastVersion";
             }
 
             Console.WriteLine($"[RustAnalyzer] Found RustVersion: {version}");
@@ -25,8 +25,8 @@ namespace RustAnalyzer.Configuration
             
             if (!_isInitialized)
             {
-                var regularProvider = HooksProviderDiscovery.CreateRegularProvider(version);
-                var deprecatedProvider = HooksProviderDiscovery.CreateDeprecatedProvider(version);
+                var regularProvider = ProviderDiscovery.CreateRegularHooksProvider(version);
+                var deprecatedProvider = ProviderDiscovery.CreateDeprecatedHooksProvider(version);
 
                 if (regularProvider != null && deprecatedProvider != null)
                 {
@@ -42,8 +42,6 @@ namespace RustAnalyzer.Configuration
             }
         }
 
-        public static string GetVersion() => _version;
-
-        public static bool IsInitialized() => _isInitialized;
+        public static string Version => _version;
     }
 }

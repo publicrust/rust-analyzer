@@ -1,11 +1,11 @@
-using RustAnalyzer.src.Hooks.Attributes;
+using RustAnalyzer.src.Attributes;
 using RustAnalyzer.src.Hooks.Interfaces;
 using System;
 using System.Reflection;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
-    [HooksVersion("Universal")]
+    [Version("Universal")]
     public class HooksUniversalProvider : BaseJsonHooksProvider 
     {
         protected override string JsonContent => @"{

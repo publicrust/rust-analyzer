@@ -58,7 +58,7 @@ namespace RustAnalyzer.Analyzers
                 
                 RustVersionProvider.Initialize(options);
 
-                if (RustVersionProvider.IsInitialized())
+                if (RustVersionProvider.IsInitialized)
                 {
                     syntaxContext.ReportDiagnostic(
                         Diagnostic.Create(

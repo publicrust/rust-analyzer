@@ -1,12 +1,11 @@
-﻿
-using RustAnalyzer.src.Hooks.Attributes;
+﻿using RustAnalyzer.src.Attributes;
 using RustAnalyzer.src.Hooks.Interfaces;
 using System;
 using System.Reflection;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
-    [HooksVersion("240Dev")]
+    [Version("240DevBlog")]
     public class Hooks240DevBlogProvider : BaseJsonHooksProvider
     {
         protected override string JsonContent => @"{

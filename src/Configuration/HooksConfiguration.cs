@@ -8,7 +8,7 @@ using RustAnalyzer.Utils;
 using RustAnalyzer.src.Hooks.Providers;
 using RustAnalyzer.src.Hooks.Interfaces;
 using RustAnalyzer.Configuration;
-using RustAnalyzer.src.Hooks.Services;
+using RustAnalyzer.src.Services;
 
 namespace RustAnalyzer
 {
@@ -32,7 +32,7 @@ namespace RustAnalyzer
 
             try
             {
-                var regularProvider = HooksProviderDiscovery.CreateRegularProvider("Universal");
+                var regularProvider = ProviderDiscovery.CreateRegularHooksProvider("Universal");
                 if (regularProvider == null)
                 {
                     _currentProvider = provider;
