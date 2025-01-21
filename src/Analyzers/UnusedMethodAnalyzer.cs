@@ -2,13 +2,15 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using RustAnalyzer.Configuration;
+using RustAnalyzer.src.Configuration;
+using RustAnalyzer.Utils;
+using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Collections.Generic;
-using RustAnalyzer.Utils;
-using RustAnalyzer.src.Configuration;
 
-namespace RustAnalyzer
+namespace RustAnalyzer.Analyzers
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public sealed class UnusedMethodAnalyzer : DiagnosticAnalyzer
@@ -74,7 +76,7 @@ namespace RustAnalyzer
                 return;
 
             // Если метод называется "command"
-            if (IsCommand(methodSymbol.Name))
+            if (CommandUtils.IsCommand(methodSymbol))
             {
                 ReportDiagnostic(
                     context,
@@ -223,15 +225,6 @@ namespace RustAnalyzer
             }
 
             return false;
-        }
-
-        private static bool IsCommand(string methodName)
-        {
-            // Преобразуем строку в нижний регистр для игнорирования регистра
-            string methodNameLower = methodName.ToLower();
-
-            // Проверка на наличие подстрок "command" или "cmd"
-            return methodNameLower.Contains("command") || methodNameLower.Contains("cmd");
         }
 
         /// <summary>
