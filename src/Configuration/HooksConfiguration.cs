@@ -151,10 +151,12 @@ namespace RustAnalyzer
                 !HooksUtils.IsRustClass(method.ContainingType))
                 return Enumerable.Empty<string>();
 
-            return StringSimilarity.FindSimilar(
+            var candidates = _hooks.Select(h => (text: h.HookName, context: string.Empty));
+            return StringSimilarity.FindSimilarWithContext(
                 method.Name,
-                _hooks.Select(h => h.HookName).Distinct(),
-                maxSuggestions);
+                candidates,
+                maxSuggestions)
+                .Select(r => r.Text);
         }
     }
 }
