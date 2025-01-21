@@ -158,46 +158,16 @@ namespace RustAnalyzer
 
         private string FindSimilarMembers(string targetName, List<ISymbol> members)
         {
-            var similarMembers = members
-                .Select(m => new
-                {
-                    Symbol = m,
-                    Score = CalculateSimilarityScore(targetName, m.Name)
-                })
-                .Where(x => x.Score > 0)
-                .OrderByDescending(x => x.Score)
-                .ThenBy(x => x.Symbol.Name)
-                .Take(5) // Limit to 5 suggestions
-                .Select(x => FormatMemberSuggestion(x.Symbol))
+            var candidates = members.Select(m => (text: m.Name, context: FormatMemberSuggestion(m)));
+            
+            var similarMembers = StringSimilarity.FindSimilarWithContext(
+                targetName,
+                candidates,
+                maxSuggestions: 5)
+                .Select(r => r.Context) // Используем Context, так как там уже отформатированное предложение
                 .ToList();
 
             return string.Join("\n", similarMembers);
-        }
-
-        private double CalculateSimilarityScore(string target, string candidate)
-        {
-            double score = 0.0;
-
-            // Exact prefix match
-            if (candidate.StartsWith(target, StringComparison.OrdinalIgnoreCase))
-            {
-                score += 10.0;
-            }
-
-            // Substring match
-            if (candidate.IndexOf(target, StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                score += 5.0;
-            }
-
-            // Levenshtein distance
-            int distance = StringDistance.GetLevenshteinDistance(target, candidate);
-            if (distance <= 3)
-            {
-                score += 5.0 - distance; // Closer distance gets higher score
-            }
-
-            return score;
         }
 
         private string FormatMemberSuggestion(ISymbol symbol)
