@@ -27,11 +27,13 @@ namespace RustAnalyzer.Configuration
             {
                 var regularProvider = ProviderDiscovery.CreateRegularHooksProvider(version);
                 var deprecatedProvider = ProviderDiscovery.CreateDeprecatedHooksProvider(version);
+                var stringPoolProvider = ProviderDiscovery.CreateStringPoolProvider(version);
 
-                if (regularProvider != null && deprecatedProvider != null)
+                if (regularProvider != null && deprecatedProvider != null && stringPoolProvider != null)
                 {
                     HooksConfiguration.Initialize(regularProvider);
                     DeprecatedHooksConfiguration.Initialize(deprecatedProvider);
+                    StringPoolConfiguration.Initialize(stringPoolProvider);
                     _isInitialized = true;
                     Console.WriteLine($"[RustAnalyzer] Successfully initialized with version: {_version}");
                 }

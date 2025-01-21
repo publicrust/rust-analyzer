@@ -60,11 +60,26 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
         private readonly Compilation _compilation;
         private readonly Dictionary<(string TypeName, string MethodName), MethodConfig> _methodCache;
         private readonly Dictionary<IMethodSymbol, bool> _methodCallCache;
+        private readonly Dictionary<(string TypeName, string PropertyName), PropertyConfig> _propertyCache;
 
         private enum PrefabNameCheckType
         {
             FullPath,
             ShortName
+        }
+
+        private class PropertyConfig
+        {
+            public string TypeName { get; }
+            public string PropertyName { get; }
+            public PrefabNameCheckType CheckType { get; }
+
+            public PropertyConfig(string typeName, string propertyName, PrefabNameCheckType checkType = PrefabNameCheckType.FullPath)
+            {
+                TypeName = typeName;
+                PropertyName = propertyName;
+                CheckType = checkType;
+            }
         }
 
         private class MethodConfig
@@ -88,7 +103,9 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             _compilation = compilation;
             _methodCache = new Dictionary<(string, string), MethodConfig>();
             _methodCallCache = new Dictionary<IMethodSymbol, bool>(SymbolEqualityComparer.Default);
+            _propertyCache = new Dictionary<(string, string), PropertyConfig>();
             InitializeMethodCache();
+            InitializePropertyCache();
         }
 
         private void InitializeMethodCache()
@@ -146,6 +163,22 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             }
         }
 
+        private void InitializePropertyCache()
+        {
+            var knownProperties = new List<PropertyConfig>
+            {
+                new PropertyConfig("BaseNetworkable", "PrefabName", PrefabNameCheckType.FullPath),
+                new PropertyConfig("BaseNetworkable", "ShortPrefabName", PrefabNameCheckType.ShortName),
+                new PropertyConfig("ItemDefinition", "shortname", PrefabNameCheckType.ShortName)
+            };
+
+            foreach (var propertyConfig in knownProperties)
+            {
+                var key = (propertyConfig.TypeName, propertyConfig.PropertyName);
+                _propertyCache[key] = propertyConfig;
+            }
+        }
+
         private bool MethodCallsKnownMethod(IMethodSymbol methodSymbol)
         {
             if (_methodCallCache.TryGetValue(methodSymbol, out bool result))
@@ -193,7 +226,14 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
 
         public void AnalyzeBinaryExpression(SyntaxNodeAnalysisContext context)
         {
+            Console.WriteLine("[RustAnalyzer] Analyzing binary expression");
             var binaryExpression = (BinaryExpressionSyntax)context.Node;
+
+            if (IsGeneratedCode(binaryExpression.SyntaxTree, context.CancellationToken))
+            {
+                Console.WriteLine("[RustAnalyzer] Skipping generated code");
+                return;
+            }
 
             var leftMemberAccess = binaryExpression.Left as MemberAccessExpressionSyntax;
             var rightMemberAccess = binaryExpression.Right as MemberAccessExpressionSyntax;
@@ -201,58 +241,14 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             var leftLiteral = binaryExpression.Left as LiteralExpressionSyntax;
             var rightLiteral = binaryExpression.Right as LiteralExpressionSyntax;
 
-            if (!IsValidPrefabNameComparison(context, leftMemberAccess, leftLiteral, rightMemberAccess, rightLiteral))
+            Console.WriteLine($"[RustAnalyzer] Left: {binaryExpression.Left.GetType().Name}, Right: {binaryExpression.Right.GetType().Name}");
+
+            // Проверяем сравнение в обоих направлениях
+            if (!IsValidPrefabNameComparison(context, leftMemberAccess, leftLiteral, rightMemberAccess, rightLiteral) &&
+                !IsValidPrefabNameComparison(context, rightMemberAccess, rightLiteral, leftMemberAccess, leftLiteral))
             {
+                Console.WriteLine("[RustAnalyzer] No valid prefab name comparison found");
                 return;
-            }
-
-            var literalExpression = leftLiteral ?? rightLiteral;
-            var memberAccess = leftMemberAccess ?? rightMemberAccess;
-
-            // Если не строковый литерал, выходим
-            if (literalExpression == null || memberAccess == null || !literalExpression.IsKind(SyntaxKind.StringLiteralExpression))
-            {
-                return;
-            }
-
-            var stringValue = literalExpression.Token.ValueText;
-            bool isShortPrefabName = memberAccess.Name.Identifier.Text == "ShortPrefabName";
-
-            if (isShortPrefabName)
-            {
-                if (!IsValidShortName(stringValue))
-                {
-                    var suggestions = FindSimilarShortNames(stringValue);
-
-                    string suggestionMessage = suggestions.Any()
-                        ? $" Did you mean one of these: {string.Join(", ", suggestions)}?"
-                        : " Make sure to use a valid prefab short name";
-
-                    var diagnostic = Diagnostic.Create(
-                        Rule,
-                        literalExpression.GetLocation(),
-                        stringValue,
-                        suggestionMessage);
-                    context.ReportDiagnostic(diagnostic);
-                }
-            }
-            else
-            {
-                if (!IsValidPrefabPath(stringValue))
-                {
-                    var suggestions = FindSimilarPrefabs(stringValue);
-
-                    string suggestionMessage = suggestions.Any()
-                        ? $" Did you mean one of these: {string.Join(", ", suggestions)}?"
-                        : " Make sure to use a valid prefab path";
-
-                    var diagnostic = Diagnostic.Create(
-                        Rule,
-                        literalExpression.GetLocation(),
-                        stringValue,
-                        suggestionMessage);
-                    context.ReportDiagnostic(diagnostic);
-                }
             }
         }
 
@@ -318,10 +314,13 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
 
         private void CheckStringValue(SyntaxNodeAnalysisContext context, string value, Location location, PrefabNameCheckType checkType)
         {
+            Console.WriteLine($"[RustAnalyzer] Checking string value: {value} with type: {checkType}");
+            
             if (checkType == PrefabNameCheckType.FullPath)
             {
                 if (!IsValidPrefabPath(value))
                 {
+                    Console.WriteLine($"[RustAnalyzer] Invalid prefab path: {value}");
                     ReportDiagnostic(
                         context,
                         location,
@@ -329,16 +328,21 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
                         GetSuggestionMessage(value)
                     );
                 }
+                else
+                {
+                    Console.WriteLine($"[RustAnalyzer] Valid prefab path: {value}");
+                }
             }
             else
             {
                 // Проверяем короткое имя
                 if (!IsValidShortName(value))
                 {
+                    Console.WriteLine($"[RustAnalyzer] Invalid short name: {value}");
                     var suggestions = FindSimilarShortNames(value);
                     string suggestionMessage = suggestions.Any()
-                        ? $" Did you mean one of these: {string.Join(", ", suggestions)}?"
-                        : " Make sure to use a valid prefab short name";
+                        ? $". Did you mean one of these: {string.Join(", ", suggestions)}?"
+                        : ". Make sure to use a valid prefab short name";
 
                     ReportDiagnostic(
                         context,
@@ -347,17 +351,32 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
                         suggestionMessage
                     );
                 }
+                else
+                {
+                    Console.WriteLine($"[RustAnalyzer] Valid short name: {value}");
+                }
             }
         }
 
         private bool IsValidShortName(string shortName)
         {
             shortName = shortName.ToLowerInvariant().Trim();
+            Console.WriteLine($"[RustAnalyzer] Checking short name '{shortName}' against {StringPoolConfiguration.ToNumber.Count} items");
+            
+            if (StringPoolConfiguration.ToNumber.Count == 0)
+            {
+                Console.WriteLine("[RustAnalyzer] Warning: StringPoolConfiguration.ToNumber is empty!");
+                return true; // Временно разрешаем все значения, если конфигурация пуста
+            }
+            
+            Console.WriteLine($"[RustAnalyzer] Available short names: {string.Join(", ", StringPoolConfiguration.ToNumber.Keys.Select(k => Path.GetFileNameWithoutExtension(k)))}");
+            
             foreach (var prefabName in StringPoolConfiguration.ToNumber.Keys)
             {
                 var sn = Path.GetFileNameWithoutExtension(prefabName);
                 if (sn.Equals(shortName, StringComparison.OrdinalIgnoreCase))
                 {
+                    Console.WriteLine($"[RustAnalyzer] Found match: {sn} = {shortName}");
                     return true;
                 }
             }
@@ -402,11 +421,26 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
         {
             shortName = shortName.ToLowerInvariant();
 
-            return StringPoolConfiguration.ToNumber.Keys
+            // Получаем все короткие имена из конфигурации
+            var allShortNames = StringPoolConfiguration.ToNumber.Keys
                 .Select(p => Path.GetFileNameWithoutExtension(p))
                 .Distinct()
+                .ToList();
+
+            // Сначала ищем точные совпадения по части имени
+            var exactMatches = allShortNames
+                .Where(sn => sn.Contains(shortName) || shortName.Contains(sn))
+                .Take(3);
+
+            if (exactMatches.Any())
+            {
+                return exactMatches;
+            }
+
+            // Если точных совпадений нет, используем расстояние Левенштейна
+            return allShortNames
                 .Select(sn => new { ShortName = sn, Distance = StringDistance.GetLevenshteinDistance(sn, shortName) })
-                .Where(x => x.Distance <= 3)
+                .Where(x => x.Distance <= Math.Min(3, shortName.Length / 2)) // Адаптивный порог в зависимости от длины строки
                 .OrderBy(x => x.Distance)
                 .Take(3)
                 .Select(x => x.ShortName);
@@ -488,38 +522,87 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             MemberAccessExpressionSyntax? rightMember,
             LiteralExpressionSyntax? rightLiteral)
         {
+            Console.WriteLine("[RustAnalyzer] Starting comparison analysis");
+            
             if ((leftMember == null && rightMember == null) || (leftLiteral == null && rightLiteral == null))
+            {
+                Console.WriteLine("[RustAnalyzer] No valid member access or literal found");
                 return false;
+            }
 
             if ((leftMember != null && rightMember != null) || (leftLiteral != null && rightLiteral != null))
+            {
+                Console.WriteLine("[RustAnalyzer] Both sides are members or both are literals");
                 return false;
+            }
 
             var memberAccess = leftMember ?? rightMember;
 
             if (memberAccess == null)
+            {
+                Console.WriteLine("[RustAnalyzer] No member access found");
                 return false;
+            }
 
             var propertyName = memberAccess.Name.Identifier.Text;
-
-            if (!(propertyName == "PrefabName" || propertyName == "ShortPrefabName"))
-                return false;
+            Console.WriteLine($"[RustAnalyzer] Checking property: {propertyName}");
 
             var typeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression);
             var objectType = typeInfo.Type;
             if (objectType == null)
+            {
+                Console.WriteLine("[RustAnalyzer] Could not determine type");
                 return false;
+            }
+
+            Console.WriteLine($"[RustAnalyzer] Expression type: {objectType.ToDisplayString()}");
 
             var currentType = objectType;
             while (currentType != null)
             {
                 var currentTypeName = currentType.ToDisplayString();
+                Console.WriteLine($"[RustAnalyzer] Checking type: {currentTypeName}");
+                
+                var key = (currentTypeName, propertyName);
+                var globalKey = ($"global::{currentTypeName}", propertyName);
 
-                if (PossibleBaseNetworkableNames.Contains(currentTypeName))
+                Console.WriteLine($"[RustAnalyzer] Looking for keys: {key}, {globalKey}");
+                Console.WriteLine($"[RustAnalyzer] Available property configs: {string.Join(", ", _propertyCache.Keys.Select(k => $"{k.TypeName}.{k.PropertyName}"))}");
+
+                PropertyConfig? propertyConfig = null;
+                if (_propertyCache.TryGetValue(key, out var config))
+                {
+                    Console.WriteLine("[RustAnalyzer] Found config by direct key");
+                    propertyConfig = config;
+                }
+                else if (_propertyCache.TryGetValue(globalKey, out config))
+                {
+                    Console.WriteLine("[RustAnalyzer] Found config by global key");
+                    propertyConfig = config;
+                }
+
+                if (propertyConfig != null)
+                {
+                    Console.WriteLine($"[RustAnalyzer] Found property config: {propertyConfig.TypeName}.{propertyConfig.PropertyName}");
+                    // Получаем литерал для проверки
+                    var literal = leftLiteral ?? rightLiteral;
+                    if (literal != null)
+                    {
+                        var value = literal.Token.ValueText;
+                        Console.WriteLine($"[RustAnalyzer] Checking value: {value} with type: {propertyConfig.CheckType}");
+                        CheckStringValue(context, value, literal.GetLocation(), propertyConfig.CheckType);
+                    }
                     return true;
+                }
 
                 currentType = currentType.BaseType;
+                if (currentType != null)
+                {
+                    Console.WriteLine($"[RustAnalyzer] Moving to base type: {currentType.ToDisplayString()}");
+                }
             }
 
+            Console.WriteLine("[RustAnalyzer] No matching property config found");
             return false;
         }
 
