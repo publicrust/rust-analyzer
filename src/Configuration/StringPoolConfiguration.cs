@@ -19,34 +19,8 @@ namespace RustAnalyzer.src.Configuration
 
             try
             {
-                var regularProvider = ProviderDiscovery.CreateStringPoolProvider("Universal");
-                if (regularProvider == null)
-                {
-                    _currentProvider = provider;
-                    _toNumber = provider.GetToNumber();
-                    return;
-                }
-
-                // Создаем словарь для быстрого поиска
-                var dictionary = new Dictionary<string, uint>();
-                
-                // Сначала добавляем все из regularProvider
-                foreach (var pair in regularProvider.GetToNumber())
-                {
-                    dictionary[pair.Key] = pair.Value;
-                }
-                
-                // Добавляем из provider, только если такого ключа еще нет
-                foreach (var pair in provider.GetToNumber())
-                {
-                    if (!dictionary.ContainsKey(pair.Key))
-                    {
-                        dictionary[pair.Key] = pair.Value;
-                    }
-                }
-
                 _currentProvider = provider;
-                _toNumber = dictionary;
+                _toNumber = provider.GetToNumber();
             }
             catch (Exception)
             {
