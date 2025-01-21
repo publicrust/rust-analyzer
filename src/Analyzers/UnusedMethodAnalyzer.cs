@@ -97,25 +97,22 @@ namespace RustAnalyzer
                 return;
 
             
-            var rustHooks = StringDistance.FindKeyValues(
-                methodSymbol.Name,
-                HooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                    .Select(s => ("rust", s))
-                    .Concat(PluginHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
-                        .Select(s => ($" (from plugin: {s.pluginName})", s.hookName))),
-                3).Select(s => s.key == "rust" ? s.value : s.value + s.key);
+            // Получаем похожие хуки Rust и плагинов
+            var candidates = HooksConfiguration.GetSimilarHooks(methodSymbol, 3)
+                .Select(s => (s, "rust"))
+                .Concat(PluginHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
+                    .Select(s => (s.hookName, $"(from plugin: {s.pluginName})")))
+                .Concat(UnityHooksConfiguration.GetSimilarHooks(methodSymbol, 3)
+                    .Select(s => (s, string.Empty)));
 
-            // Получаем похожие хуки Unity
-            var unityHooks = UnityHooksConfiguration.GetSimilarHooks(methodSymbol, 3);
-                
-            // Объединяем все хуки
-            var commonHooks = rustHooks.Concat(unityHooks)
-                .Distinct()
-                .ToList();
-                
-            if (commonHooks.Any())
+            var similarHooks = StringSimilarity.FindSimilarWithContext(
+                methodSymbol.Name,
+                candidates,
+                3);
+
+            if (similarHooks.Any())
             {
-                var suggestionsText = string.Join(", ", commonHooks);
+                var suggestionsText = string.Join(", ", similarHooks);
 
                 ReportDiagnostic(
                     context,

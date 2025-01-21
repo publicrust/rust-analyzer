@@ -151,7 +151,7 @@ namespace RustAnalyzer
                 !HooksUtils.IsRustClass(method.ContainingType))
                 return Enumerable.Empty<string>();
 
-            return StringDistance.FindSimilarShortNames(
+            return StringSimilarity.FindSimilar(
                 method.Name,
                 _hooks.Select(h => h.HookName).Distinct(),
                 maxSuggestions);
