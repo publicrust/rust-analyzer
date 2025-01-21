@@ -99,13 +99,13 @@ namespace RustAnalyzer
             
             // Получаем похожие хуки из всех источников
             var similarHooks = HooksConfiguration.GetSimilarHooks(methodSymbol)
-                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})");
+                .Select(h => h.ToString());
 
             var similarPluginHooks = PluginHooksConfiguration.GetSimilarHooks(methodSymbol)
-                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))}) (from plugin: {h.PluginName})");
+                .Select(h => h.ToString() + $" (from plugin: {h.PluginName})");
 
             var similarUnityHooks = UnityHooksConfiguration.GetSimilarHooks(methodSymbol)
-                .Select(h => $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})");
+                .Select(h => h.ToString());
 
             var allSimilarHooks = similarHooks
                 .Concat(similarPluginHooks)
