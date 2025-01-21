@@ -1,636 +1,157 @@
 using System;
 using System.Collections.Generic;
 using System.Text.Json;
+using System.Linq;
+using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.Models
 {
     public static class PluginHooksJson
     {
-        private const string JsonContent = @"[
-            {
-                ""HookName"": ""OnVanishReappear"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""Vanish""  
-            },
-
-            {
-                ""HookName"": ""OnPlayerMuted"",
-                ""HookParameters"": [""BasePlayer"",""BasePlayer"",""int"",""String""],
-                ""PluginName"": ""IQChat""  
-            },
-
-            {
-                ""HookName"": ""OnRealSecond"",
-                ""HookParameters"": [],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-
-            {
-                ""HookName"": ""OnRustDayStarted"",
-                ""HookParameters"": [],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-            {
-                ""HookName"": ""OnRustNightStarted"",
-                ""HookParameters"": [],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-            {
-                ""HookName"": ""OnNewRealHourStarted"",
-                ""HookParameters"": [""int""],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-            {
-                ""HookName"": ""OnNewRealDayStarted"",
-                ""HookParameters"": [""int""],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-            {
-                ""HookName"": ""OnNewRealMonthStarted"",
-                ""HookParameters"": [""int""],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-            {
-                ""HookName"": ""OnNewRealYearStarted"",
-                ""HookParameters"": [""int""],
-                ""PluginName"": ""aTimeAPI""  
-            },
-
-
-            {
-                ""HookName"": ""OnModeratorSendBadWords"",
-                ""HookParameters"": [""BasePlayer"",""string""],
-                ""PluginName"": ""IQChat""  
-            },
-
-            {
-                ""HookName"": ""OnPlayerSendBadWords"",
-                ""HookParameters"": [""BasePlayer"",""string""],
-                ""PluginName"": ""IQChat""  
-            },
-
-            {
-                ""HookName"": ""OnHomeRemoved"",
-                ""HookParameters"": [""BasePlayer"",""Vector3"",""string""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnHomeAdded"",
-                ""HookParameters"": [""BasePlayer"",""Vector3"",""string""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnHomeAccepted"",
-                ""HookParameters"": [""BasePlayer"",""string"",""int""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnHomeAccepted"",
-                ""HookParameters"": [""BasePlayer"",""string"",""int""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnPlayerTeleported"",
-                ""HookParameters"": [""BasePlayer"",""Vector3"",""Vector3""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnTeleportAccepted"",
-                ""HookParameters"": [""BasePlayer"",""BasePlayer"",""int""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnTeleportRejected"",
-                ""HookParameters"": [""BasePlayer"",""BasePlayer""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""CanTeleport"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""canTeleport"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnTeleportRejected"",
-                ""HookParameters"": [""BasePlayer"",""BasePlayer""],
-                ""PluginName"": ""IQTeleportation""  
-            },
-
-            {
-                ""HookName"": ""OnPlayerTeleported"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""Vector3""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportRejected"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportRequestCompleted"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportAccepted"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer"", ""int""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeAccepted"",
-                ""HookParameters"": [""BasePlayer"", ""string"", ""int""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeRemoved"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeAdded"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportInterrupted"",
-                ""HookParameters"": [""BasePlayer"", ""string"", ""ulong"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""SetPermission"",
-                ""HookParameters"": [""ulong"", ""string"", ""DateTime""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""SetPermission"",
-                ""HookParameters"": [""ulong"", ""string"", ""string""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""SetGroup"",
-                ""HookParameters"": [""ulong"", ""string"", ""DateTime""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""SetGroup"",
-                ""HookParameters"": [""ulong"", ""string"", ""string""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""RevokePermission"",
-                ""HookParameters"": [""ulong"", ""string""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""RevokeGroup"",
-                ""HookParameters"": [""ulong"", ""string"", ""DateTime""],
-                ""PluginName"": ""IQPermissions""
-            },
-            {
-                ""HookName"": ""OnKickPlayer"",
-                ""HookParameters"": [""string"", ""string"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnBannedPlayerIP"",
-                ""HookParameters"": [""string"", ""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnBannedPlayerID"",
-                ""HookParameters"": [""ulong"", ""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnUpdateTimeBannedID"",
-                ""HookParameters"": [""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnUpdateTimeBannedIP"",
-                ""HookParameters"": [""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnChangePermanentBannedID"",
-                ""HookParameters"": [""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnChangePermanentBannedIP"",
-                ""HookParameters"": [""string"", ""double"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnUnbannedID"",
-                ""HookParameters"": [""string"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnUnbannedIP"",
-                ""HookParameters"": [""string"", ""BasePlayer""],
-                ""PluginName"": ""IQBanSystem""
-            },
-            {
-                ""HookName"": ""OnTeleportInterrupted"",
-                ""HookParameters"": [""BasePlayer"", ""string"", ""ulong"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeAdded"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeRemoved"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""string""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnHomeAccepted"",
-                ""HookParameters"": [""BasePlayer"", ""string"", ""int""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportAccepted"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer"", ""int""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportRequestCompleted"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnTeleportRejected"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer""],
-                ""PluginName"": ""NTeleportation""
-            },
-            {
-                ""HookName"": ""OnPlayerTeleported"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""Vector3""],
-                ""PluginName"": ""NTeleportation""
-            },
-
-            {
-                ""HookName"": ""StartRaidBlocking"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""bool""],
-                ""PluginName"": ""NoEscape""
-            },
-            {
-                ""HookName"": ""StopBlocking"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""NoEscape""
-            },
-            {
-                ""HookName"": ""StopRaidBlocking"",
-                ""HookParameters"": [""string""],
-                ""PluginName"": ""NoEscape""
-            },
-            {
-                ""HookName"": ""StartCombatBlocking"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""NoEscape""
-            },
-            {
-                ""HookName"": ""StopCombatBlocking"",
-                ""HookParameters"": [""string""],
-                ""PluginName"": ""NoEscape""
-            },
-
-            {
-                ""HookName"": ""API_AddOnlinePrisoner"",
-                ""HookParameters"": [""BasePlayer"", ""bool"", ""int""],
-                ""PluginName"": ""XPrison""
-            },
-            {
-                ""HookName"": ""API_RemoveOnlinePrisoner"",
-                ""HookParameters"": [""BasePlayer""],
-                ""PluginName"": ""XPrison""
-            },
-            {
-                ""HookName"": ""API_AddOfflinePrisoner"",
-                ""HookParameters"": [""BasePlayer"", ""bool"", ""int""],
-                ""PluginName"": ""XPrison""
-            },
-            {
-                ""HookName"": ""API_RemoveOfflinePrisoner"",
-                ""HookParameters"": [""ulong""],
-                ""PluginName"": ""XPrison""
-            },
-
-            {
-                ""HookName"": ""OnQuestCompleted"",
-                ""HookParameters"": [""BasePlayer"", ""string""],
-                ""PluginName"": ""XDQuest""
-            },
-            {
-                ""HookName"": ""OnQuestProgress"",
-                ""HookParameters"": [""ulong"", ""QuestType"", ""string"", ""string"", ""List<Item>"", ""int""],
-                ""PluginName"": ""XDQuest""
-            },
-
-            {
-                ""HookName"": ""API_SET_BALANCE"",
-                ""HookParameters"": [""string"", ""int"", ""ItemContainer""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_SET_BALANCE"",
-                ""HookParameters"": [""ulong"", ""int"", ""ItemContainer""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_SET_BALANCE"",
-                ""HookParameters"": [""BasePlayer"", ""int"", ""ItemContainer""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_REMOVE_BALANCE"",
-                ""HookParameters"": [""string"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_REMOVE_BALANCE"",
-                ""HookParameters"": [""BasePlayer"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_REMOVE_BALANCE"",
-                ""HookParameters"": [""ulong"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""ulong"", ""ulong"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""BasePlayer"", ""BasePlayer"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""string"", ""string"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""ulong"", ""string"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""string"", ""ulong"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""BasePlayer"", ""ulong"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""BasePlayer"", ""string"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""ulong"", ""BasePlayer"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""API_TRANSFERS"",
-                ""HookParameters"": [""string"", ""BasePlayer"", ""int""],
-                ""PluginName"": ""IQEconomic""
-            },
-            {
-                ""HookName"": ""OnTimedPermissionGranted"",
-                ""HookParameters"": [""string"", ""string"", ""TimeSpan""],
-                ""PluginName"": ""TimedPermissions""
-            },
-            {
-                ""HookName"": ""OnTimedPermissionExtended"",
-                ""HookParameters"": [""string"", ""string"", ""TimeSpan""],
-                ""PluginName"": ""TimedPermissions""
-            },
-            {
-                ""HookName"": ""OnTimedGroupAdded"",
-                ""HookParameters"": [""string"", ""string"", ""TimeSpan""],
-                ""PluginName"": ""TimedPermissions""
-            },
-            {
-                ""HookName"": ""OnTimedGroupExtended"",
-                ""HookParameters"": [""string"", ""string"", ""TimeSpan""],
-                ""PluginName"": ""TimedPermissions""
-            },
-            {
-                ""HookName"": ""SetZoneStatus"",
-                ""HookParameters"": [""string"", ""bool""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""AddFlag"",
-                ""HookParameters"": [""string"", ""string""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""RemoveFlag"",
-                ""HookParameters"": [""string"", ""string""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""AddDisabledFlag"",
-                ""HookParameters"": [""string"", ""string""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""RemoveDisabledFlag"",
-                ""HookParameters"": [""string"", ""string""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""OnEnterZone"",
-                ""HookParameters"": [""string"", ""BasePlayer""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""OnExitZone"",
-                ""HookParameters"": [""string"", ""BasePlayer""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""OnEntityEnterZone"",
-                ""HookParameters"": [""string"", ""BaseEntity""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""OnEntityExitZone"",
-                ""HookParameters"": [""string"", ""BaseEntity""],
-                ""PluginName"": ""ZoneManager""
-            },
-            {
-                ""HookName"": ""GetKitNames"",
-                ""HookParameters"": [""List<string>""],
-                ""PluginName"": ""Kits""
-            },
-            {
-                ""HookName"": ""SetPlayerCooldown"",
-                ""HookParameters"": [""ulong"", ""string"", ""double""],
-                ""PluginName"": ""Kits""
-            },
-            {
-                ""HookName"": ""SetPlayerKitUses"",
-                ""HookParameters"": [""ulong"", ""string"", ""int""],
-                ""PluginName"": ""Kits""
-            },
-            {
-                ""HookName"": ""OnBackpackOpened"",
-                ""HookParameters"": [""BasePlayer"", ""ulong"", ""ItemContainer""],
-                ""PluginName"": ""Backpacks""
-            },
-            {
-                ""HookName"": ""OnBackpackClosed"",
-                ""HookParameters"": [""BasePlayer"", ""ulong"", ""ItemContainer""],
-                ""PluginName"": ""Backpacks""
-            },
-            {
-                ""HookName"": ""OnRaidableBaseStarted"",
-                ""HookParameters"": [""Vector3"", ""int"", ""float""],
-                ""PluginName"": ""RaidableBases""
-            },
-            {
-                ""HookName"": ""OnRaidableBaseEnded"",
-                ""HookParameters"": [""Vector3"", ""int"", ""float""],
-                ""PluginName"": ""RaidableBases""
-            },
-            {
-                ""HookName"": ""OnPlayerEnteredRaidableBase"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""bool""],
-                ""PluginName"": ""RaidableBases""
-            },
-            {
-                ""HookName"": ""OnPlayerExitedRaidableBase"",
-                ""HookParameters"": [""BasePlayer"", ""Vector3"", ""bool""],
-                ""PluginName"": ""RaidableBases""
-            },
-            {
-                ""HookName"": ""GetPointRaid"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""FClan""
-            },
-            {
-                ""HookName"": ""IsFriendOf"",
-                ""HookParameters"": [""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""GetFriendList"",
-                ""HookParameters"": [""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""GetFriendList"",
-                ""HookParameters"": [""string""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""GetFriends"",
-                ""HookParameters"": [""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""GetMaxFriends"",
-                ""HookParameters"": [],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""IsFriend"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""RemoveFriend"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""AddFriend"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""AreFriends"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""HasFriend"",
-                ""HookParameters"": [""ulong"", ""ulong""],
-                ""PluginName"": ""Friends""
-            },
-            {
-                ""HookName"": ""OnOpenedCase"",
-                ""HookParameters"": [""BasePlayer"", ""string""],
-                ""PluginName"": ""IQCases""
-            },
-            {
-                ""HookName"": ""OnBuyCase"",
-                ""HookParameters"": [""BasePlayer"", ""string""],
-                ""PluginName"": ""IQCases""
-            },
-            {
-                ""HookName"": ""OnSellCase"",
-                ""HookParameters"": [""BasePlayer"", ""string""],
-                ""PluginName"": ""IQCases""
-            },
-            {
-                ""HookName"": ""API_GIVE_CASE"",
-                ""HookParameters"": [""ulong"", ""string"", ""int""],
-                ""PluginName"": ""IQCases""
-            },
-            {
-                ""HookName"": ""API_REMOVE_CASE"",
-                ""HookParameters"": [""ulong"", ""string"", ""int""],
-                ""PluginName"": ""IQCases""
-            }
-            
-        ]";
+        private static readonly List<Tuple<string, string>> Hooks = new List<Tuple<string, string>>
+        {
+            Tuple.Create("Vanish", "OnVanishReappear(BasePlayer)"),
+            Tuple.Create("IQChat", "OnPlayerMuted(BasePlayer,BasePlayer,int,String)"),
+            Tuple.Create("aTimeAPI", "OnRealSecond()"),
+            Tuple.Create("aTimeAPI", "OnRustDayStarted()"),
+            Tuple.Create("aTimeAPI", "OnRustNightStarted()"),
+            Tuple.Create("aTimeAPI", "OnNewRealHourStarted(int)"),
+            Tuple.Create("aTimeAPI", "OnNewRealDayStarted(int)"),
+            Tuple.Create("aTimeAPI", "OnNewRealMonthStarted(int)"),
+            Tuple.Create("aTimeAPI", "OnNewRealYearStarted(int)"),
+            Tuple.Create("IQChat", "OnModeratorSendBadWords(BasePlayer,string)"),
+            Tuple.Create("IQChat", "OnPlayerSendBadWords(BasePlayer,string)"),
+            Tuple.Create("IQTeleportation", "OnHomeRemoved(BasePlayer,Vector3,string)"),
+            Tuple.Create("IQTeleportation", "OnHomeAdded(BasePlayer,Vector3,string)"),
+            Tuple.Create("IQTeleportation", "OnHomeAccepted(BasePlayer,string,int)"),
+            Tuple.Create("IQTeleportation", "OnHomeAccepted(BasePlayer,string,int)"),
+            Tuple.Create("IQTeleportation", "OnPlayerTeleported(BasePlayer,Vector3,Vector3)"),
+            Tuple.Create("IQTeleportation", "OnTeleportAccepted(BasePlayer,BasePlayer,int)"),
+            Tuple.Create("IQTeleportation", "OnTeleportRejected(BasePlayer,BasePlayer)"),
+            Tuple.Create("IQTeleportation", "CanTeleport(BasePlayer)"),
+            Tuple.Create("IQTeleportation", "canTeleport(BasePlayer)"),
+            Tuple.Create("IQTeleportation", "OnTeleportRejected(BasePlayer,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnPlayerTeleported(BasePlayer,Vector3,Vector3)"),
+            Tuple.Create("NTeleportation", "OnTeleportRejected(BasePlayer,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnTeleportRequestCompleted(BasePlayer,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnTeleportAccepted(BasePlayer,BasePlayer,int)"),
+            Tuple.Create("NTeleportation", "OnHomeAccepted(BasePlayer,string,int)"),
+            Tuple.Create("NTeleportation", "OnHomeRemoved(BasePlayer,Vector3,string)"),
+            Tuple.Create("NTeleportation", "OnHomeAdded(BasePlayer,Vector3,string)"),
+            Tuple.Create("NTeleportation", "OnTeleportInterrupted(BasePlayer,string,ulong,string)"),
+            Tuple.Create("IQPermissions", "SetPermission(ulong,string,DateTime)"),
+            Tuple.Create("IQPermissions", "SetPermission(ulong,string,string)"),
+            Tuple.Create("IQPermissions", "SetGroup(ulong,string,DateTime)"),
+            Tuple.Create("IQPermissions", "SetGroup(ulong,string,string)"),
+            Tuple.Create("IQPermissions", "RevokePermission(ulong,string)"),
+            Tuple.Create("IQPermissions", "RevokeGroup(ulong,string,DateTime)"),
+            Tuple.Create("IQBanSystem", "OnKickPlayer(string,string,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnBannedPlayerIP(string,string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnBannedPlayerID(ulong,string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnUpdateTimeBannedID(string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnUpdateTimeBannedIP(string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnChangePermanentBannedID(string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnChangePermanentBannedIP(string,double,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnUnbannedID(string,BasePlayer)"),
+            Tuple.Create("IQBanSystem", "OnUnbannedIP(string,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnTeleportInterrupted(BasePlayer,string,ulong,string)"),
+            Tuple.Create("NTeleportation", "OnHomeAdded(BasePlayer,Vector3,string)"),
+            Tuple.Create("NTeleportation", "OnHomeRemoved(BasePlayer,Vector3,string)"),
+            Tuple.Create("NTeleportation", "OnHomeAccepted(BasePlayer,string,int)"),
+            Tuple.Create("NTeleportation", "OnTeleportAccepted(BasePlayer,BasePlayer,int)"),
+            Tuple.Create("NTeleportation", "OnTeleportRequestCompleted(BasePlayer,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnTeleportRejected(BasePlayer,BasePlayer)"),
+            Tuple.Create("NTeleportation", "OnPlayerTeleported(BasePlayer,Vector3,Vector3)"),
+            Tuple.Create("NoEscape", "StartRaidBlocking(BasePlayer,Vector3,bool)"),
+            Tuple.Create("NoEscape", "StopBlocking(BasePlayer)"),
+            Tuple.Create("NoEscape", "StopRaidBlocking(string)"),
+            Tuple.Create("NoEscape", "StartCombatBlocking(BasePlayer)"),
+            Tuple.Create("NoEscape", "StopCombatBlocking(string)"),
+            Tuple.Create("XPrison", "API_AddOnlinePrisoner(BasePlayer,bool,int)"),
+            Tuple.Create("XPrison", "API_RemoveOnlinePrisoner(BasePlayer)"),
+            Tuple.Create("XPrison", "API_AddOfflinePrisoner(BasePlayer,bool,int)"),
+            Tuple.Create("XPrison", "API_RemoveOfflinePrisoner(ulong)"),
+            Tuple.Create("XDQuest", "OnQuestCompleted(BasePlayer,string)"),
+            Tuple.Create("XDQuest", "OnQuestProgress(ulong,QuestType,string,string,List<Item>,int)"),
+            Tuple.Create("IQEconomic", "API_SET_BALANCE(string,int,ItemContainer)"),
+            Tuple.Create("IQEconomic", "API_SET_BALANCE(ulong,int,ItemContainer)"),
+            Tuple.Create("IQEconomic", "API_SET_BALANCE(BasePlayer,int,ItemContainer)"),
+            Tuple.Create("IQEconomic", "API_REMOVE_BALANCE(string,int)"),
+            Tuple.Create("IQEconomic", "API_REMOVE_BALANCE(BasePlayer,int)"),
+            Tuple.Create("IQEconomic", "API_REMOVE_BALANCE(ulong,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(ulong,ulong,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(BasePlayer,BasePlayer,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(string,string,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(ulong,string,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(string,ulong,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(BasePlayer,ulong,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(BasePlayer,string,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(ulong,BasePlayer,int)"),
+            Tuple.Create("IQEconomic", "API_TRANSFERS(string,BasePlayer,int)"),
+            Tuple.Create("TimedPermissions", "OnTimedPermissionGranted(string,string,TimeSpan)"),
+            Tuple.Create("TimedPermissions", "OnTimedPermissionExtended(string,string,TimeSpan)"),
+            Tuple.Create("TimedPermissions", "OnTimedGroupAdded(string,string,TimeSpan)"),
+            Tuple.Create("TimedPermissions", "OnTimedGroupExtended(string,string,TimeSpan)"),
+            Tuple.Create("ZoneManager", "SetZoneStatus(string,bool)"),
+            Tuple.Create("ZoneManager", "AddFlag(string,string)"),
+            Tuple.Create("ZoneManager", "RemoveFlag(string,string)"),
+            Tuple.Create("ZoneManager", "AddDisabledFlag(string,string)"),
+            Tuple.Create("ZoneManager", "RemoveDisabledFlag(string,string)"),
+            Tuple.Create("ZoneManager", "OnEnterZone(string,BasePlayer)"),
+            Tuple.Create("ZoneManager", "OnExitZone(string,BasePlayer)"),
+            Tuple.Create("ZoneManager", "OnEntityEnterZone(string,BaseEntity)"),
+            Tuple.Create("ZoneManager", "OnEntityExitZone(string,BaseEntity)"),
+            Tuple.Create("Kits", "GetKitNames(List<string>)"),
+            Tuple.Create("Kits", "SetPlayerCooldown(ulong,string,double)"),
+            Tuple.Create("Kits", "SetPlayerKitUses(ulong,string,int)"),
+            Tuple.Create("Backpacks", "OnBackpackOpened(BasePlayer,ulong,ItemContainer)"),
+            Tuple.Create("Backpacks", "OnBackpackClosed(BasePlayer,ulong,ItemContainer)"),
+            Tuple.Create("RaidableBases", "OnRaidableBaseStarted(Vector3,int,float)"),
+            Tuple.Create("RaidableBases", "OnRaidableBaseEnded(Vector3,int,float)"),
+            Tuple.Create("RaidableBases", "OnPlayerEnteredRaidableBase(BasePlayer,Vector3,bool)"),
+            Tuple.Create("RaidableBases", "OnPlayerExitedRaidableBase(BasePlayer,Vector3,bool)"),
+            Tuple.Create("FClan", "GetPointRaid(ulong,ulong)"),
+            Tuple.Create("Friends", "IsFriendOf(ulong)"),
+            Tuple.Create("Friends", "GetFriendList(ulong)"),
+            Tuple.Create("Friends", "GetFriendList(string)"),
+            Tuple.Create("Friends", "GetFriends(ulong)"),
+            Tuple.Create("Friends", "GetMaxFriends()"),
+            Tuple.Create("Friends", "IsFriend(ulong,ulong)"),
+            Tuple.Create("Friends", "RemoveFriend(ulong,ulong)"),
+            Tuple.Create("Friends", "AddFriend(ulong,ulong)"),
+            Tuple.Create("Friends", "AreFriends(ulong,ulong)"),
+            Tuple.Create("Friends", "HasFriend(ulong,ulong)"),
+            Tuple.Create("IQCases", "OnOpenedCase(BasePlayer,string)"),
+            Tuple.Create("IQCases", "OnBuyCase(BasePlayer,string)"),
+            Tuple.Create("IQCases", "OnSellCase(BasePlayer,string)"),
+            Tuple.Create("IQCases", "API_GIVE_CASE(ulong,string,int)"),
+            Tuple.Create("IQCases", "API_REMOVE_CASE(ulong,string,int)")
+        };
 
         public static List<PluginHookModel> GetHooks()
         {
             try
             {
-                var options = new JsonSerializerOptions
+                return Hooks.Select(h =>
                 {
-                    PropertyNameCaseInsensitive = true
-                };
-                
-                var hooks = JsonSerializer.Deserialize<List<PluginHookModel>>(JsonContent, options);
-                return hooks ?? new List<PluginHookModel>();
+                    var hookModel = HooksUtils.ParseHookString(h.Item2);
+                    if (hookModel == null)
+                        return null;
+
+                    return new PluginHookModel
+                    {
+                        PluginName = h.Item1,
+                        HookName = hookModel.HookName,
+                        HookParameters = hookModel.HookParameters
+                    };
+                })
+                .Where(h => h != null)
+                .Select(h => h!)
+                .ToList();
             }
-            catch
+            catch(Exception ex)
             {
+                Console.WriteLine($"[RustAnalyzer] Failed to load plugin hooks PluginHooksJson {ex.Message}");
                 return new List<PluginHookModel>();
             }
         }
