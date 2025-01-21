@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer;
 using RustAnalyzer.src.Configuration;
+using RustAnalyzer.Utils;
 using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
@@ -390,7 +391,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             invalidPath = invalidPath.ToLowerInvariant().Replace("\\", "/").Trim();
 
             return StringPoolConfiguration.ToNumber.Keys
-                .Select(p => new { Path = p, Distance = GetLevenshteinDistance(p, invalidPath) })
+                .Select(p => new { Path = p, Distance = StringDistance.GetLevenshteinDistance(p, invalidPath) })
                 .Where(x => x.Distance <= 5)
                 .OrderBy(x => x.Distance)
                 .Take(3)
@@ -404,7 +405,7 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
             return StringPoolConfiguration.ToNumber.Keys
                 .Select(p => Path.GetFileNameWithoutExtension(p))
                 .Distinct()
-                .Select(sn => new { ShortName = sn, Distance = GetLevenshteinDistance(sn, shortName) })
+                .Select(sn => new { ShortName = sn, Distance = StringDistance.GetLevenshteinDistance(sn, shortName) })
                 .Where(x => x.Distance <= 3)
                 .OrderBy(x => x.Distance)
                 .Take(3)
@@ -550,37 +551,6 @@ public class StringPoolGetAnalyzer : DiagnosticAnalyzer
                 }
             }
             return false;
-        }
-
-        private int GetLevenshteinDistance(string s, string t)
-        {
-            if (string.IsNullOrEmpty(s))
-                return t.Length;
-            if (string.IsNullOrEmpty(t))
-                return s.Length;
-
-            int[,] d = new int[s.Length + 1, t.Length + 1];
-
-            for (int i = 0; i <= s.Length; i++)
-                d[i, 0] = i;
-            for (int j = 0; j <= t.Length; j++)
-                d[0, j] = j;
-
-            for (int i = 1; i <= s.Length; i++)
-            {
-                for (int j = 1; j <= t.Length; j++)
-                {
-                    int cost = s[i - 1] == t[j - 1] ? 0 : 1;
-
-                    d[i, j] = Math.Min(
-                        Math.Min(
-                            d[i - 1, j] + 1,
-                            d[i, j - 1] + 1),
-                        d[i - 1, j - 1] + cost);
-                }
-            }
-
-            return d[s.Length, t.Length];
         }
     }
 }
