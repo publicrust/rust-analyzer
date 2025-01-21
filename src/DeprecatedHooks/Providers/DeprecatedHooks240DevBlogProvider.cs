@@ -6,7 +6,7 @@ using System.Reflection;
 
 namespace RustAnalyzer.src.DeprecatedHooks.Providers
 {
-    [Version("240DevBlog")]
+    [Version("240Dev")]
     public class DeprecatedHooks240DevBlogProvider : BaseDeprecatedJsonHooksProvider
     {
         protected override string JsonContent => "{\r\n  \"deprecated\": {\r\n} }";

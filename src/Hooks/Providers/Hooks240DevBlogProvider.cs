@@ -5,7 +5,7 @@ using System.Reflection;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
-    [Version("240DevBlog")]
+    [Version("240Dev")]
     public class Hooks240DevBlogProvider : BaseJsonHooksProvider
     {
         protected override string JsonContent => @"{
