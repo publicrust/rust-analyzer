@@ -34,8 +34,17 @@ namespace RustAnalyzer.Utils
 
             // Проверяем наличие атрибутов команд
             if (method.GetAttributes().Any(attr => 
-                CommandAttributes.Any(ca => 
-                    attr.AttributeClass?.Name.Equals(ca, StringComparison.OrdinalIgnoreCase) == true)))
+            {
+                if (attr.AttributeClass == null) return false;
+                var attrName = attr.AttributeClass.Name;
+                var attrFullName = attr.AttributeClass.ToDisplayString();
+
+                return CommandAttributes.Any(ca => 
+                    attrName.Equals(ca, StringComparison.OrdinalIgnoreCase) ||
+                    attrName.Equals(ca + "Attribute", StringComparison.OrdinalIgnoreCase) ||
+                    attrFullName.EndsWith($".{ca}", StringComparison.OrdinalIgnoreCase) ||
+                    attrFullName.EndsWith($".{ca}Attribute", StringComparison.OrdinalIgnoreCase));
+            }))
             {
                 return true;
             }
@@ -43,7 +52,7 @@ namespace RustAnalyzer.Utils
             // Проверяем имя метода на наличие индикаторов команды
             var methodNameLower = method.Name.ToLowerInvariant();
             return CommandNameIndicators.Any(indicator => 
-                methodNameLower.Contains(indicator, StringComparison.OrdinalIgnoreCase));
+                methodNameLower.IndexOf(indicator, StringComparison.OrdinalIgnoreCase) >= 0);
         }
     }
 } 
