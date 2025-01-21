@@ -1,38 +1,50 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 namespace RustAnalyzer.Utils
 {
     public static class StringDistance
     {
-        public static int GetLevenshteinDistance(string s1, string s2)
+        public static int GetLevenshteinDistance(string s, string t)
         {
-            if (string.IsNullOrEmpty(s1))
-                return string.IsNullOrEmpty(s2) ? 0 : s2.Length;
-            if (string.IsNullOrEmpty(s2))
-                return s1.Length;
-
-            int[,] d = new int[s1.Length + 1, s2.Length + 1];
-
-            for (int i = 0; i <= s1.Length; i++)
-                d[i, 0] = i;
-            for (int j = 0; j <= s2.Length; j++)
-                d[0, j] = j;
-
-            for (int i = 1; i <= s1.Length; i++)
+            if (string.IsNullOrEmpty(s))
             {
-                for (int j = 1; j <= s2.Length; j++)
+                return string.IsNullOrEmpty(t) ? 0 : t.Length;
+            }
+
+            if (string.IsNullOrEmpty(t))
+            {
+                return s.Length;
+            }
+
+            int n = s.Length;
+            int m = t.Length;
+            int[,] d = new int[n + 1, m + 1];
+
+            for (int i = 0; i <= n; i++)
+            {
+                d[i, 0] = i;
+            }
+
+            for (int j = 0; j <= m; j++)
+            {
+                d[0, j] = j;
+            }
+
+            for (int i = 1; i <= n; i++)
+            {
+                for (int j = 1; j <= m; j++)
                 {
-                    int cost = (s2[j - 1] == s1[i - 1]) ? 0 : 1;
-                    d[i, j] = Math.Min(Math.Min(
-                        d[i - 1, j] + 1,      // deletion
-                        d[i, j - 1] + 1),     // insertion
-                        d[i - 1, j - 1] + cost); // substitution
+                    int cost = (s[i - 1] == t[j - 1]) ? 0 : 1;
+                    d[i, j] = Math.Min(
+                        Math.Min(d[i - 1, j] + 1, d[i, j - 1] + 1),
+                        d[i - 1, j - 1] + cost);
                 }
             }
 
-            return d[s1.Length, s2.Length];
+            return d[n, m];
         }
 
         public static IEnumerable<string> FindSimilarPrefabs(string input, IEnumerable<string> prefabs, int maxSuggestions = 3)

@@ -113,13 +113,14 @@ namespace RustAnalyzer.src.Configuration
         public static IEnumerable<string> FindSimilarShortNames(string shortName)
         {
             shortName = shortName.ToLowerInvariant();
-            return StringDistance.FindSimilarShortNames(shortName, _toNumber.Keys);
+            var candidates = _toNumber.Keys.Select(p => Path.GetFileNameWithoutExtension(p));
+            return StringSimilarity.FindSimilar(shortName, candidates);
         }
 
         public static IEnumerable<string> FindSimilarPrefabs(string invalidPath)
         {
             invalidPath = invalidPath.ToLowerInvariant().Replace("\\", "/").Trim();
-            return StringDistance.FindSimilarPrefabs(invalidPath, _toNumber.Keys);
+            return StringSimilarity.FindSimilar(invalidPath, _toNumber.Keys);
         }
 
         public static string? CurrentVersion => _currentProvider?.Version;
