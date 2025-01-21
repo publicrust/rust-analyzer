@@ -108,12 +108,10 @@ namespace RustAnalyzer.Analyzers
 
             public void AnalyzeBinaryExpression(SyntaxNodeAnalysisContext context)
             {
-                Console.WriteLine("[RustAnalyzer] Analyzing binary expression");
                 var binaryExpression = (BinaryExpressionSyntax)context.Node;
 
                 if (IsGeneratedCode(binaryExpression.SyntaxTree, context.CancellationToken))
                 {
-                    Console.WriteLine("[RustAnalyzer] Skipping generated code");
                     return;
                 }
 
@@ -123,12 +121,9 @@ namespace RustAnalyzer.Analyzers
                 var leftLiteral = binaryExpression.Left as LiteralExpressionSyntax;
                 var rightLiteral = binaryExpression.Right as LiteralExpressionSyntax;
 
-                Console.WriteLine($"[RustAnalyzer] Left: {binaryExpression.Left.GetType().Name}, Right: {binaryExpression.Right.GetType().Name}");
-
                 if (!IsValidPrefabNameComparison(context, leftMemberAccess, leftLiteral, rightMemberAccess, rightLiteral) &&
                     !IsValidPrefabNameComparison(context, rightMemberAccess, rightLiteral, leftMemberAccess, leftLiteral))
                 {
-                    Console.WriteLine("[RustAnalyzer] No valid prefab name comparison found");
                     return;
                 }
             }
@@ -195,8 +190,6 @@ namespace RustAnalyzer.Analyzers
 
             private void CheckStringValue(SyntaxNodeAnalysisContext context, string value, Location location, PrefabNameCheckType checkType)
             {
-                Console.WriteLine($"[RustAnalyzer] Checking string value: {value} with type: {checkType}");
-                
                 if (checkType == PrefabNameCheckType.FullPath)
                 {
                     if (!StringPoolConfiguration.IsValidPrefabPath(value))
@@ -299,17 +292,17 @@ namespace RustAnalyzer.Analyzers
                 MemberAccessExpressionSyntax? rightMember,
                 LiteralExpressionSyntax? rightLiteral)
             {
-                Console.WriteLine("[RustAnalyzer] Starting comparison analysis");
+               
                 
                 if ((leftMember == null && rightMember == null) || (leftLiteral == null && rightLiteral == null))
                 {
-                    Console.WriteLine("[RustAnalyzer] No valid member access or literal found");
+                   
                     return false;
                 }
 
                 if ((leftMember != null && rightMember != null) || (leftLiteral != null && rightLiteral != null))
                 {
-                    Console.WriteLine("[RustAnalyzer] Both sides are members or both are literals");
+                   
                     return false;
                 }
 
@@ -317,28 +310,28 @@ namespace RustAnalyzer.Analyzers
 
                 if (memberAccess == null)
                 {
-                    Console.WriteLine("[RustAnalyzer] No member access found");
+                   
                     return false;
                 }
 
                 var propertyName = memberAccess.Name.Identifier.Text;
-                Console.WriteLine($"[RustAnalyzer] Checking property: {propertyName}");
+               
 
                 var typeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression);
                 var objectType = typeInfo.Type;
                 if (objectType == null)
                 {
-                    Console.WriteLine("[RustAnalyzer] Could not determine type");
+                   
                     return false;
                 }
 
-                Console.WriteLine($"[RustAnalyzer] Expression type: {objectType.ToDisplayString()}");
+               
 
                 var currentType = objectType;
                 while (currentType != null)
                 {
                     var currentTypeName = currentType.ToDisplayString();
-                    Console.WriteLine($"[RustAnalyzer] Checking type: {currentTypeName}");
+                   
 
                     var propertyConfig = StringPoolConfiguration.GetPropertyConfig(currentTypeName, propertyName);
                     if (propertyConfig == null)
@@ -348,12 +341,12 @@ namespace RustAnalyzer.Analyzers
 
                     if (propertyConfig != null)
                     {
-                        Console.WriteLine($"[RustAnalyzer] Found property config: {propertyConfig.TypeName}.{propertyConfig.PropertyName}");
+                       
                         var literal = leftLiteral ?? rightLiteral;
                         if (literal != null)
                         {
                             var value = literal.Token.ValueText;
-                            Console.WriteLine($"[RustAnalyzer] Checking value: {value} with type: {propertyConfig.CheckType}");
+                           
                             CheckStringValue(context, value, literal.GetLocation(), propertyConfig.CheckType);
                         }
                         return true;
@@ -362,11 +355,11 @@ namespace RustAnalyzer.Analyzers
                     currentType = currentType.BaseType;
                     if (currentType != null)
                     {
-                        Console.WriteLine($"[RustAnalyzer] Moving to base type: {currentType.ToDisplayString()}");
+                       
                     }
                 }
 
-                Console.WriteLine("[RustAnalyzer] No matching property config found");
+               
                 return false;
             }
 

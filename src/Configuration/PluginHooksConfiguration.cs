@@ -22,10 +22,12 @@ namespace RustAnalyzer
             try
             {
                 var hooks = PluginHooksJson.GetHooks();
+                Console.WriteLine($"[RustAnalyzer] Loaded {hooks.Count} plugin hooks");
                 _hooks = ImmutableList.CreateRange(hooks);
             }
             catch (Exception ex)
             {
+                Console.WriteLine($"[RustAnalyzer] Failed to load plugin hooks PluginHooksConfiguration {ex.Message}");
                 _hooks = ImmutableList<PluginHookModel>.Empty;
             }
         }
@@ -77,12 +79,9 @@ namespace RustAnalyzer
                 !HooksUtils.IsRustClass(method.ContainingType))
                 return Enumerable.Empty<(string, string)>();
 
-            var similarHooks = _hooks
-                .Select(h => (h.HookName, h.PluginName))
-                .OrderBy(h => StringDistance.GetLevenshteinDistance(method.Name, h.HookName))
-                .Take(maxSuggestions);
-
-            return similarHooks;
+            var candidates = _hooks.Select(h => (text: h.HookName, context: h.PluginName));
+            return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
+                .Select(r => (r.Text, r.Context));
         }
 
         /// <summary>

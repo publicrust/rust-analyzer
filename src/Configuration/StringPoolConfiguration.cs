@@ -79,22 +79,18 @@ namespace RustAnalyzer.src.Configuration
         public static bool IsValidShortName(string shortName)
         {
             shortName = shortName.ToLowerInvariant().Trim();
-            Console.WriteLine($"[RustAnalyzer] Checking short name '{shortName}' against {_toNumber.Count} items");
             
             if (_toNumber.Count == 0)
             {
-                Console.WriteLine("[RustAnalyzer] Warning: StringPoolConfiguration.ToNumber is empty!");
                 return true; // Временно разрешаем все значения, если конфигурация пуста
             }
             
-            Console.WriteLine($"[RustAnalyzer] Available short names: {string.Join(", ", _toNumber.Keys.Select(k => Path.GetFileNameWithoutExtension(k)))}");
             
             foreach (var prefabName in _toNumber.Keys)
             {
                 var sn = Path.GetFileNameWithoutExtension(prefabName);
                 if (sn.Equals(shortName, StringComparison.OrdinalIgnoreCase))
                 {
-                    Console.WriteLine($"[RustAnalyzer] Found match: {sn} = {shortName}");
                     return true;
                 }
             }
