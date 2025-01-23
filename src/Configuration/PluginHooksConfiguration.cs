@@ -79,7 +79,10 @@ namespace RustAnalyzer
                 !HooksUtils.IsRustClass(method.ContainingType))
                 return Enumerable.Empty<PluginHookModel>();
 
-            var candidates = _hooks.Select(h => (text: h.HookName, context: h));
+            var candidates = _hooks.Select(h => (
+                text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})", 
+                context: h));
+
             return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
                 .Select(r => r.Context);
         }

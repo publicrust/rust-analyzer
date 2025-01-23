@@ -153,7 +153,10 @@ namespace RustAnalyzer
             if (!_hooks.Any())
                 return Enumerable.Empty<HookModel>();
 
-            var candidates = _hooks.Select(h => (text: h.HookName, context: h));
+            // Включаем полную сигнатуру в текст для сравнения
+            var candidates = _hooks.Select(h => (
+                text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})", 
+                context: h));
 
             return StringSimilarity.FindSimilarWithContext(
                 method.Name,
