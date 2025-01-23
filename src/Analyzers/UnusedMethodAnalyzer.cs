@@ -75,17 +75,7 @@ namespace RustAnalyzer.Analyzers
             if (IsMethodUsed(methodSymbol, context))
                 return;
 
-            // Если метод называется "command"
-            if (CommandUtils.IsCommand(methodSymbol))
-            {
-                ReportDiagnostic(
-                    context,
-                    methodSymbol,
-                    MessageFormatCommand,
-                    methodSymbol.Name);
-                return;
-            }
-
+            // Проверяем хуки
             if (HooksConfiguration.IsKnownHook(methodSymbol))
                 return;
 
@@ -98,6 +88,16 @@ namespace RustAnalyzer.Analyzers
             if (DeprecatedHooksConfiguration.IsHook(methodSymbol))
                 return;
 
+            // Если метод называется "command" и не используется через AddConsoleCommand
+            if (CommandUtils.IsCommand(methodSymbol))
+            {
+                ReportDiagnostic(
+                    context,
+                    methodSymbol,
+                    MessageFormatCommand,
+                    methodSymbol.Name);
+                return;
+            }
             
             // Получаем похожие хуки из всех источников
             var similarHooks = HooksConfiguration.GetSimilarHooks(methodSymbol)
@@ -190,14 +190,49 @@ namespace RustAnalyzer.Analyzers
 
             var root = context.Node.SyntaxTree.GetRoot(context.CancellationToken);
 
-            // Смотрим все вызовы методов в файле
+            // Проверяем регистрацию через все варианты команд
             var invocations = root.DescendantNodes().OfType<InvocationExpressionSyntax>();
             foreach (var invocation in invocations)
             {
                 var info = context.SemanticModel.GetSymbolInfo(invocation);
                 if (info.Symbol is IMethodSymbol calledMethod)
                 {
-                    // Проверяем совпадение или совпадение через OriginalDefinition
+                    // Проверяем прямые вызовы AddConsoleCommand/AddChatCommand
+                    if (calledMethod.Name == "AddConsoleCommand" || calledMethod.Name == "AddChatCommand")
+                    {
+                        var args = invocation.ArgumentList.Arguments;
+                        if (args.Count >= 3)
+                        {
+                            // Проверяем третий аргумент (может быть nameof или делегат)
+                            var methodNameArg = args[2].Expression;
+                            
+                            // Проверяем случай с nameof
+                            var constValue = context.SemanticModel.GetConstantValue(methodNameArg);
+                            if (constValue.HasValue && constValue.Value is string methodName && methodName == method.Name)
+                            {
+                                return true;
+                            }
+
+                            // Проверяем случай с делегатом
+                            if (methodNameArg is SimpleLambdaExpressionSyntax lambda)
+                            {
+                                var lambdaSymbol = context.SemanticModel.GetSymbolInfo(lambda).Symbol;
+                                if (lambdaSymbol != null && lambdaSymbol.ContainingSymbol.Equals(method, SymbolEqualityComparer.Default))
+                                {
+                                    return true;
+                                }
+                            }
+                            
+                            // Проверяем случай с прямой передачей метода
+                            var argSymbol = context.SemanticModel.GetSymbolInfo(methodNameArg).Symbol;
+                            if (argSymbol != null && argSymbol.Equals(method, SymbolEqualityComparer.Default))
+                            {
+                                return true;
+                            }
+                        }
+                    }
+
+                    // Проверяем прямые вызовы метода
                     if (SymbolComparer.Equals(calledMethod, method) ||
                         SymbolComparer.Equals(calledMethod.OriginalDefinition, method))
                     {
