@@ -43,28 +43,28 @@ namespace RustAnalyzer
                 var regularHooks = regularProvider.GetHooks();
                 var providerHooks = provider.GetHooks();
                 
-                // Создаем словарь для быстрого поиска хуков по имени и параметрам
-                var hookDictionary = new Dictionary<string, HookModel>();
+                var allHooks = new List<HookModel>();
+                var processedHookSignatures = new HashSet<string>();
                 
-                // Сначала добавляем все хуки из regularProvider
                 foreach (var hook in regularHooks)
                 {
-                    var key = $"{hook.HookName}";
-                    hookDictionary[key] = hook;
+                    allHooks.Add(hook);
+                    var signature = $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
+                    processedHookSignatures.Add(signature);
                 }
                 
-                // Добавляем хуки из provider, только если такого хука еще нет
                 foreach (var hook in providerHooks)
                 {
-                    var key = $"{hook.HookName}";
-                    if (!hookDictionary.ContainsKey(key))
+                    var signature = $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
+                    if (!processedHookSignatures.Contains(signature))
                     {
-                        hookDictionary[key] = hook;
+                        allHooks.Add(hook);
+                        processedHookSignatures.Add(signature);
                     }
                 }
 
                 _currentProvider = provider;
-                _hooks = ImmutableList.CreateRange(hookDictionary.Values);
+                _hooks = ImmutableList.CreateRange(allHooks);
             }
             catch (Exception)
             {
@@ -163,3 +163,4 @@ namespace RustAnalyzer
         }
     }
 }
+
