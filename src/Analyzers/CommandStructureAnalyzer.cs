@@ -130,7 +130,7 @@ namespace RustAnalyzer.Analyzers
                 }
             }
             // Если метод похож на команду по имени
-            else if (CommandUtils.IsCommand(methodSymbol))
+            else if (CommandUtils.IsCommand(methodSymbol) && !HooksConfiguration.IsHook(methodSymbol))
             {
                 Console.WriteLine($"[RustAnalyzer] Method looks like a command by name");
                 // Проверяем, соответствует ли метод хотя бы одной из известных структур
