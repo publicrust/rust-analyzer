@@ -69,6 +69,10 @@ namespace OxideAnalyzers
                 if (parameterType.Type == null || parameterType.Type.IsValueType)
                     continue;
 
+                // Пропускаем строковые параметры, так как для них есть отдельный анализатор
+                if (parameterType.Type.SpecialType == SpecialType.System_String)
+                    continue;
+
                 // Находим все обращения к параметру (методы и свойства)
                 var memberAccesses = methodDeclaration.DescendantNodes()
                     .OfType<MemberAccessExpressionSyntax>()
