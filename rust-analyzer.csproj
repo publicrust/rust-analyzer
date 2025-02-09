@@ -20,6 +20,7 @@
     <AnalyzerReleaseTracking>true</AnalyzerReleaseTracking>
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -31,5 +32,10 @@
   <ItemGroup>
     <None Include="bin\$(Configuration)\$(TargetFramework)\rust-analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/" />
   </ItemGroup>
+
+  <ItemGroup>
+    <None Include="README.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+
 
 </Project>
