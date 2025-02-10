@@ -67,6 +67,9 @@ namespace RustAnalyzer.Analyzers
             if (methodSymbol == null)
                 return;
 
+            if(!HooksUtils.IsRustClass(methodSymbol.ContainingType) && !HooksUtils.IsUnityClass(methodSymbol.ContainingType))
+                return;
+
             // Пропускаем методы, которые не нужно анализировать
             if (ShouldSkip(methodSymbol))
                 return;
