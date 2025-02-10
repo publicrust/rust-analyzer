@@ -2,6 +2,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using Microsoft.CodeAnalysis.Text;
 using RustAnalyzer.Configuration;
 using RustAnalyzer.src.Configuration;
 using RustAnalyzer.Utils;
@@ -35,6 +36,10 @@ namespace RustAnalyzer.Analyzers
             "void CommandName(BasePlayer player, string command, string[] args)\n\n" +
             "[ConsoleCommand(\"name\")]\n" +
             "void CommandName(ConsoleSystem.Arg args)";
+
+        private static readonly LocalizableString MessageFormatAPI =
+            "Method '{0}' is never used.\n" +
+            "If you want to expose this method as an API for other plugins, mark it with [HookMethod] attribute.";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -90,6 +95,17 @@ namespace RustAnalyzer.Analyzers
 
             if (DeprecatedHooksConfiguration.IsHook(methodSymbol))
                 return;
+
+            // Если метод в регионе API, выдаем специальное сообщение
+            if (IsInAPIRegion(methodDeclaration))
+            {
+                ReportDiagnostic(
+                    context,
+                    methodSymbol,
+                    MessageFormatAPI,
+                    methodSymbol.Name);
+                return;
+            }
 
             // Если метод называется "command" и не используется через AddConsoleCommand
             if (CommandUtils.IsCommand(methodSymbol))
@@ -274,6 +290,49 @@ namespace RustAnalyzer.Analyzers
             }
 
             return false;
+        }
+
+        private static bool IsInAPIRegion(MethodDeclarationSyntax methodDeclaration)
+        {
+            // Получаем все триви до конца файла, чтобы найти все регионы
+            var syntaxTree = methodDeclaration.SyntaxTree;
+            var position = methodDeclaration.SpanStart;
+            
+            // Получаем все триви в файле
+            var root = syntaxTree.GetRoot();
+            var triviaList = root.DescendantTrivia()
+                .Where(t => t.IsKind(SyntaxKind.RegionDirectiveTrivia) || 
+                           t.IsKind(SyntaxKind.EndRegionDirectiveTrivia))
+                .OrderBy(t => t.SpanStart);
+
+            var regionStack = new Stack<string>();
+            
+            foreach (var trivia in triviaList)
+            {
+                if (trivia.SpanStart > position)
+                    break;
+
+                if (trivia.IsKind(SyntaxKind.RegionDirectiveTrivia))
+                {
+                    var regionDirective = (RegionDirectiveTriviaSyntax)trivia.GetStructure();
+                    // Получаем текст после #region
+                    var regionText = regionDirective.EndOfDirectiveToken
+                        .LeadingTrivia
+                        .ToString()
+                        .Trim()
+                        .ToUpperInvariant();
+                        
+                    regionStack.Push(regionText);
+                }
+                else if (trivia.IsKind(SyntaxKind.EndRegionDirectiveTrivia))
+                {
+                    if (regionStack.Count > 0)
+                        regionStack.Pop();
+                }
+            }
+
+            // Проверяем, находимся ли мы в API регионе
+            return regionStack.Count > 0 && regionStack.Peek() == "API";
         }
 
         /// <summary>
