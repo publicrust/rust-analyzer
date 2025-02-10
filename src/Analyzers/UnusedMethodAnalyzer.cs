@@ -188,75 +188,86 @@ namespace RustAnalyzer.Analyzers
             if (method.IsOverride)
                 return true;
 
-            var root = context.Node.SyntaxTree.GetRoot(context.CancellationToken);
+            // Пропускаем методы расширения, так как они могут использоваться в других местах
+            if (method.IsExtensionMethod)
+                return true;
 
-            // Проверяем регистрацию через все варианты команд
-            var invocations = root.DescendantNodes().OfType<InvocationExpressionSyntax>();
-            foreach (var invocation in invocations)
+            var compilation = context.Compilation;
+            
+            // Проходим по всем SyntaxTree в компиляции
+            foreach (var tree in compilation.SyntaxTrees)
             {
-                var info = context.SemanticModel.GetSymbolInfo(invocation);
-                if (info.Symbol is IMethodSymbol calledMethod)
-                {
-                    // Проверяем прямые вызовы AddConsoleCommand/AddChatCommand
-                    if (calledMethod.Name == "AddConsoleCommand" || calledMethod.Name == "AddChatCommand")
-                    {
-                        var args = invocation.ArgumentList.Arguments;
-                        if (args.Count >= 3)
-                        {
-                            // Проверяем третий аргумент (может быть nameof или делегат)
-                            var methodNameArg = args[2].Expression;
-                            
-                            // Проверяем случай с nameof
-                            var constValue = context.SemanticModel.GetConstantValue(methodNameArg);
-                            if (constValue.HasValue && constValue.Value is string methodName && methodName == method.Name)
-                            {
-                                return true;
-                            }
+                var semanticModel = compilation.GetSemanticModel(tree);
+                var root = tree.GetRoot(context.CancellationToken);
 
-                            // Проверяем случай с делегатом
-                            if (methodNameArg is SimpleLambdaExpressionSyntax lambda)
+                // Проверяем регистрацию через все варианты команд
+                var invocations = root.DescendantNodes().OfType<InvocationExpressionSyntax>();
+                foreach (var invocation in invocations)
+                {
+                    var info = semanticModel.GetSymbolInfo(invocation);
+                    if (info.Symbol is IMethodSymbol calledMethod)
+                    {
+                        // Проверяем прямые вызовы AddConsoleCommand/AddChatCommand
+                        if (calledMethod.Name == "AddConsoleCommand" || calledMethod.Name == "AddChatCommand")
+                        {
+                            var args = invocation.ArgumentList.Arguments;
+                            if (args.Count >= 3)
                             {
-                                var lambdaSymbol = context.SemanticModel.GetSymbolInfo(lambda).Symbol;
-                                if (lambdaSymbol != null && lambdaSymbol.ContainingSymbol.Equals(method, SymbolEqualityComparer.Default))
+                                // Проверяем третий аргумент (может быть nameof или делегат)
+                                var methodNameArg = args[2].Expression;
+                                
+                                // Проверяем случай с nameof
+                                var constValue = semanticModel.GetConstantValue(methodNameArg);
+                                if (constValue.HasValue && constValue.Value is string methodName && methodName == method.Name)
+                                {
+                                    return true;
+                                }
+
+                                // Проверяем случай с делегатом
+                                if (methodNameArg is SimpleLambdaExpressionSyntax lambda)
+                                {
+                                    var lambdaSymbol = semanticModel.GetSymbolInfo(lambda).Symbol;
+                                    if (lambdaSymbol != null && lambdaSymbol.ContainingSymbol.Equals(method, SymbolEqualityComparer.Default))
+                                    {
+                                        return true;
+                                    }
+                                }
+                                
+                                // Проверяем случай с прямой передачей метода
+                                var argSymbol = semanticModel.GetSymbolInfo(methodNameArg).Symbol;
+                                if (argSymbol != null && argSymbol.Equals(method, SymbolEqualityComparer.Default))
                                 {
                                     return true;
                                 }
                             }
-                            
-                            // Проверяем случай с прямой передачей метода
-                            var argSymbol = context.SemanticModel.GetSymbolInfo(methodNameArg).Symbol;
-                            if (argSymbol != null && argSymbol.Equals(method, SymbolEqualityComparer.Default))
-                            {
-                                return true;
-                            }
+                        }
+
+                        // Проверяем прямые вызовы метода
+                        if (SymbolComparer.Equals(calledMethod, method) ||
+                            SymbolComparer.Equals(calledMethod.OriginalDefinition, method))
+                        {
+                            return true;
                         }
                     }
-
-                    // Проверяем прямые вызовы метода
-                    if (SymbolComparer.Equals(calledMethod, method) ||
-                        SymbolComparer.Equals(calledMethod.OriginalDefinition, method))
-                    {
-                        return true;
-                    }
                 }
-            }
 
-            // Проверяем использование через memberAccess, делегаты, события
-            var memberAccesses = root.DescendantNodes().OfType<MemberAccessExpressionSyntax>();
-            foreach (var memberAccess in memberAccesses)
-            {
-                var info = context.SemanticModel.GetSymbolInfo(memberAccess);
-                if (SymbolComparer.Equals(info.Symbol, method))
-                    return true;
-            }
+                // Проверяем использование через memberAccess, делегаты, события
+                var memberAccesses = root.DescendantNodes().OfType<MemberAccessExpressionSyntax>();
+                foreach (var memberAccess in memberAccesses)
+                {
+                    var info = semanticModel.GetSymbolInfo(memberAccess);
+                    if (SymbolComparer.Equals(info.Symbol, method))
+                        return true;
+                }
 
-            // Проверяем использование как идентификатор
-            var identifiers = root.DescendantNodes().OfType<IdentifierNameSyntax>();
-            foreach (var identifier in identifiers)
-            {
-                var info = context.SemanticModel.GetSymbolInfo(identifier);
-                if (SymbolComparer.Equals(info.Symbol, method))
-                    return true;
+                // Проверяем использование как идентификатор
+                var identifiers = root.DescendantNodes().OfType<IdentifierNameSyntax>();
+                foreach (var identifier in identifiers)
+                {
+                    var info = semanticModel.GetSymbolInfo(identifier);
+                    if (SymbolComparer.Equals(info.Symbol, method))
+                        return true;
+                }
             }
 
             return false;
