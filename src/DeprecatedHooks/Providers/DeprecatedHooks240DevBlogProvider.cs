@@ -1,8 +1,8 @@
-﻿using RustAnalyzer.src.Attributes;
-using RustAnalyzer.src.DeprecatedHooks.Interfaces;
-using RustAnalyzer.Models;
-using System;
+﻿using System;
 using System.Reflection;
+using RustAnalyzer.Models;
+using RustAnalyzer.src.Attributes;
+using RustAnalyzer.src.DeprecatedHooks.Interfaces;
 
 namespace RustAnalyzer.src.DeprecatedHooks.Providers
 {

@@ -14,7 +14,7 @@ namespace RustAnalyzer
             "System.Runtime.InteropServices",
             "System.Diagnostics",
             "System.Security",
-            "System.Timers"
+            "System.Timers",
         };
 
         private static readonly HashSet<string> DefaultAllowedTypes = new HashSet<string>
@@ -30,10 +30,11 @@ namespace RustAnalyzer
             "System.Net.NetworkInformation",
             "System.Net.Sockets.SocketFlags",
             "System.Security.Cryptography",
-            "System.Threading.Interlocked"
+            "System.Threading.Interlocked",
         };
 
-        public HashSet<string> RestrictedNamespaces { get; } = new HashSet<string>(DefaultRestrictedNamespaces);
+        public HashSet<string> RestrictedNamespaces { get; } =
+            new HashSet<string>(DefaultRestrictedNamespaces);
         public HashSet<string> AllowedTypes { get; } = new HashSet<string>(DefaultAllowedTypes);
 
         public static RestrictedNamespacesConfiguration Create()
@@ -41,4 +42,4 @@ namespace RustAnalyzer
             return new RestrictedNamespacesConfiguration();
         }
     }
-} 
+}

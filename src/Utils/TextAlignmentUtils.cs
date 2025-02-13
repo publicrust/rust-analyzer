@@ -17,9 +17,15 @@ namespace RustAnalyzer.Utils
             if (line == null)
                 throw new ArgumentNullException(nameof(line));
             if (charColumn < 0 || charColumn > line.Length)
-                throw new ArgumentOutOfRangeException(nameof(charColumn), "Character column is out of line bounds.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(charColumn),
+                    "Character column is out of line bounds."
+                );
             if (tabSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(tabSize), "Tab size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(tabSize),
+                    "Tab size must be greater than zero."
+                );
 
             int visualColumn = 0;
 
@@ -48,16 +54,30 @@ namespace RustAnalyzer.Utils
         /// <param name="length">The length of the member name.</param>
         /// <param name="tabSize">The size of a tab in spaces (default is 4).</param>
         /// <returns>A string with spaces and '^' characters highlighting the member.</returns>
-        public static string CreatePointerLine(string line, int charColumn, int length, int tabSize = 4)
+        public static string CreatePointerLine(
+            string line,
+            int charColumn,
+            int length,
+            int tabSize = 4
+        )
         {
             if (line == null)
                 throw new ArgumentNullException(nameof(line));
             if (charColumn < 0 || charColumn > line.Length)
-                throw new ArgumentOutOfRangeException(nameof(charColumn), "Character column is out of line bounds.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(charColumn),
+                    "Character column is out of line bounds."
+                );
             if (length <= 0)
-                throw new ArgumentOutOfRangeException(nameof(length), "Length must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(length),
+                    "Length must be greater than zero."
+                );
             if (tabSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(tabSize), "Tab size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(tabSize),
+                    "Tab size must be greater than zero."
+                );
 
             // Compute the visual column where the pointer starts
             int visualColumn = ComputeVisualColumn(line, charColumn, tabSize);
@@ -77,7 +97,10 @@ namespace RustAnalyzer.Utils
             if (line == null)
                 throw new ArgumentNullException(nameof(line));
             if (tabSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(tabSize), "Tab size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(tabSize),
+                    "Tab size must be greater than zero."
+                );
 
             var result = new StringBuilder();
             int column = 0;
@@ -113,9 +136,15 @@ namespace RustAnalyzer.Utils
             if (line == null)
                 throw new ArgumentNullException(nameof(line));
             if (visualColumn < 0)
-                throw new ArgumentOutOfRangeException(nameof(visualColumn), "Visual column must be non-negative.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(visualColumn),
+                    "Visual column must be non-negative."
+                );
             if (tabSize <= 0)
-                throw new ArgumentOutOfRangeException(nameof(tabSize), "Tab size must be greater than zero.");
+                throw new ArgumentOutOfRangeException(
+                    nameof(tabSize),
+                    "Tab size must be greater than zero."
+                );
 
             int currentVisualColumn = 0;
 

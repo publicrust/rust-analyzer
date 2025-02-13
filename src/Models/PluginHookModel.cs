@@ -14,4 +14,4 @@ namespace RustAnalyzer.Models
         /// </summary>
         public string PluginName { get; set; }
     }
-} 
+}

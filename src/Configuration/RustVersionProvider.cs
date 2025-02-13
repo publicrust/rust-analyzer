@@ -1,8 +1,8 @@
+using System;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.src.Configuration;
 using RustAnalyzer.src.Services;
-using System;
 
 namespace RustAnalyzer.Configuration
 {
@@ -22,7 +22,7 @@ namespace RustAnalyzer.Configuration
 
             Console.WriteLine($"[RustAnalyzer] Found RustVersion: {version}");
             _version = version;
-            
+
             if (!_isInitialized)
             {
                 var regularProvider = ProviderDiscovery.CreateRegularHooksProvider(version);
@@ -35,44 +35,60 @@ namespace RustAnalyzer.Configuration
                 {
                     HooksConfiguration.Initialize(regularProvider);
                     initialized = true;
-                    Console.WriteLine($"[RustAnalyzer] Initialized regular hooks for version: {_version}");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Initialized regular hooks for version: {_version}"
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"[RustAnalyzer] Warning: Failed to initialize regular hooks for version '{_version}'");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Warning: Failed to initialize regular hooks for version '{_version}'"
+                    );
                 }
 
                 if (deprecatedProvider != null)
                 {
                     DeprecatedHooksConfiguration.Initialize(deprecatedProvider);
                     initialized = true;
-                    Console.WriteLine($"[RustAnalyzer] Initialized deprecated hooks for version: {_version}");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Initialized deprecated hooks for version: {_version}"
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"[RustAnalyzer] Warning: Failed to initialize deprecated hooks for version '{_version}'");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Warning: Failed to initialize deprecated hooks for version '{_version}'"
+                    );
                 }
 
                 if (stringPoolProvider != null)
                 {
                     StringPoolConfiguration.Initialize(stringPoolProvider);
                     initialized = true;
-                    Console.WriteLine($"[RustAnalyzer] Initialized string pool for version: {_version}");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Initialized string pool for version: {_version}"
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"[RustAnalyzer] Warning: Failed to initialize string pool for version '{_version}'");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Warning: Failed to initialize string pool for version '{_version}'"
+                    );
                 }
 
                 _isInitialized = initialized;
-                
+
                 if (initialized)
                 {
-                    Console.WriteLine($"[RustAnalyzer] Successfully initialized available providers for version: {_version}");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Successfully initialized available providers for version: {_version}"
+                    );
                 }
                 else
                 {
-                    Console.WriteLine($"[RustAnalyzer] Failed to initialize: no providers found for version '{_version}'");
+                    Console.WriteLine(
+                        $"[RustAnalyzer] Failed to initialize: no providers found for version '{_version}'"
+                    );
                 }
             }
         }

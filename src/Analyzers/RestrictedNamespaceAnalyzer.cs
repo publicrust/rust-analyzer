@@ -20,7 +20,8 @@ namespace RustAnalyzer
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: "This namespace is in the list of restricted namespaces. Use only allowed types from this namespace.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000010.md");
+            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000010.md"
+        );
 
         private readonly RestrictedNamespacesConfiguration _configuration;
 
@@ -29,11 +30,13 @@ namespace RustAnalyzer
             _configuration = RestrictedNamespacesConfiguration.Create();
         }
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
@@ -46,7 +49,7 @@ namespace RustAnalyzer
         private void AnalyzeUsingDirective(SyntaxNodeAnalysisContext context)
         {
             var usingDirective = (UsingDirectiveSyntax)context.Node;
-            
+
             // Если это using с псевдонимом (alias)
             if (usingDirective.Alias != null)
             {
@@ -63,9 +66,15 @@ namespace RustAnalyzer
                         if (IsRestrictedNamespace(ns))
                         {
                             var allowedTypes = GetAllowedTypesForNamespace(ns);
-                            var firstType = allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
-                            var diagnostic = Diagnostic.Create(Rule, usingDirective.Name.GetLocation(), 
-                                ns, allowedTypes, firstType);
+                            var firstType =
+                                allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
+                            var diagnostic = Diagnostic.Create(
+                                Rule,
+                                usingDirective.Name.GetLocation(),
+                                ns,
+                                allowedTypes,
+                                firstType
+                            );
                             context.ReportDiagnostic(diagnostic);
                         }
                         return;
@@ -77,8 +86,13 @@ namespace RustAnalyzer
                     {
                         var allowedTypes = GetAllowedTypesForNamespace(typeNamespace);
                         var firstType = allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
-                        var diagnostic = Diagnostic.Create(Rule, usingDirective.Name.GetLocation(), 
-                            typeNamespace, allowedTypes, firstType);
+                        var diagnostic = Diagnostic.Create(
+                            Rule,
+                            usingDirective.Name.GetLocation(),
+                            typeNamespace,
+                            allowedTypes,
+                            firstType
+                        );
                         context.ReportDiagnostic(diagnostic);
                     }
                 }
@@ -87,15 +101,21 @@ namespace RustAnalyzer
 
             // Для обычного using проверяем пространство имён
             var namespaceName = usingDirective.Name?.ToString();
-            if (string.IsNullOrEmpty(namespaceName)) return;
+            if (string.IsNullOrEmpty(namespaceName))
+                return;
 
             // Проверяем, является ли это пространство имён запрещённым
             if (IsRestrictedNamespace(namespaceName))
             {
                 var allowedTypes = GetAllowedTypesForNamespace(namespaceName);
                 var firstType = allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
-                var diagnostic = Diagnostic.Create(Rule, usingDirective.Name.GetLocation(), 
-                    namespaceName, allowedTypes, firstType);
+                var diagnostic = Diagnostic.Create(
+                    Rule,
+                    usingDirective.Name.GetLocation(),
+                    namespaceName,
+                    allowedTypes,
+                    firstType
+                );
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -105,18 +125,25 @@ namespace RustAnalyzer
             var qualifiedName = (QualifiedNameSyntax)context.Node;
             var fullName = qualifiedName.ToString();
 
-            if (string.IsNullOrEmpty(fullName)) return;
+            if (string.IsNullOrEmpty(fullName))
+                return;
 
             // Если это разрешённый тип, пропускаем
-            if (IsAllowedType(fullName)) return;
+            if (IsAllowedType(fullName))
+                return;
 
             var ns = GetNamespaceFromTypeName(fullName);
             if (IsRestrictedNamespace(ns))
             {
                 var allowedTypes = GetAllowedTypesForNamespace(ns);
                 var firstType = allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
-                var diagnostic = Diagnostic.Create(Rule, qualifiedName.GetLocation(), 
-                    ns, allowedTypes, firstType);
+                var diagnostic = Diagnostic.Create(
+                    Rule,
+                    qualifiedName.GetLocation(),
+                    ns,
+                    allowedTypes,
+                    firstType
+                );
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -125,37 +152,47 @@ namespace RustAnalyzer
         {
             var identifier = (IdentifierNameSyntax)context.Node;
             var symbolInfo = context.SemanticModel.GetSymbolInfo(identifier);
-            
-            if (symbolInfo.Symbol?.ContainingNamespace == null) return;
+
+            if (symbolInfo.Symbol?.ContainingNamespace == null)
+                return;
 
             var containingNamespace = symbolInfo.Symbol.ContainingNamespace.ToDisplayString();
             var fullTypeName = $"{containingNamespace}.{identifier}";
 
             // Если это разрешённый тип, пропускаем
-            if (IsAllowedType(fullTypeName)) return;
+            if (IsAllowedType(fullTypeName))
+                return;
 
             if (IsRestrictedNamespace(containingNamespace))
             {
                 var allowedTypes = GetAllowedTypesForNamespace(containingNamespace);
                 var firstType = allowedTypes.Split(',').FirstOrDefault()?.Trim() ?? "Type";
-                var diagnostic = Diagnostic.Create(Rule, identifier.GetLocation(), 
-                    containingNamespace, allowedTypes, firstType);
+                var diagnostic = Diagnostic.Create(
+                    Rule,
+                    identifier.GetLocation(),
+                    containingNamespace,
+                    allowedTypes,
+                    firstType
+                );
                 context.ReportDiagnostic(diagnostic);
             }
         }
 
         private bool IsRestrictedNamespace(string namespaceName)
         {
-            if (string.IsNullOrEmpty(namespaceName)) return false;
+            if (string.IsNullOrEmpty(namespaceName))
+                return false;
 
-            return _configuration.RestrictedNamespaces.Any(restricted => 
-                namespaceName.Equals(restricted, StringComparison.Ordinal) || 
-                namespaceName.StartsWith(restricted + ".", StringComparison.Ordinal));
+            return _configuration.RestrictedNamespaces.Any(restricted =>
+                namespaceName.Equals(restricted, StringComparison.Ordinal)
+                || namespaceName.StartsWith(restricted + ".", StringComparison.Ordinal)
+            );
         }
 
         private bool IsAllowedType(string typeName)
         {
-            if (string.IsNullOrEmpty(typeName)) return false;
+            if (string.IsNullOrEmpty(typeName))
+                return false;
 
             // Проверяем точное совпадение с разрешённым типом
             return _configuration.AllowedTypes.Contains(typeName);
@@ -163,7 +200,8 @@ namespace RustAnalyzer
 
         private string GetNamespaceFromTypeName(string typeName)
         {
-            if (string.IsNullOrEmpty(typeName)) return string.Empty;
+            if (string.IsNullOrEmpty(typeName))
+                return string.Empty;
 
             var lastDotIndex = typeName.LastIndexOf('.');
             return lastDotIndex > 0 ? typeName.Substring(0, lastDotIndex) : typeName;
@@ -171,11 +209,13 @@ namespace RustAnalyzer
 
         private string GetAllowedTypesForNamespace(string namespaceName)
         {
-            if (string.IsNullOrEmpty(namespaceName)) return string.Empty;
+            if (string.IsNullOrEmpty(namespaceName))
+                return string.Empty;
 
             // Получаем только типы из конкретного пространства имён (без вложенных)
-            var allowedTypes = _configuration.AllowedTypes
-                .Where(t => {
+            var allowedTypes = _configuration
+                .AllowedTypes.Where(t =>
+                {
                     var typeNamespace = GetNamespaceFromTypeName(t);
                     return typeNamespace.Equals(namespaceName, StringComparison.Ordinal);
                 })
@@ -185,4 +225,4 @@ namespace RustAnalyzer
             return string.Join(", ", allowedTypes);
         }
     }
-} 
+}

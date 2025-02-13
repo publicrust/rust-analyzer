@@ -1,14 +1,15 @@
-﻿using RustAnalyzer.src.Attributes;
-using RustAnalyzer.src.Hooks.Interfaces;
-using System;
+﻿using System;
 using System.Reflection;
+using RustAnalyzer.src.Attributes;
+using RustAnalyzer.src.Hooks.Interfaces;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
     [Version("240Dev")]
     public class Hooks240DevBlogProvider : BaseJsonHooksProvider
     {
-        protected override string JsonContent => @"{
+        protected override string JsonContent =>
+            @"{
           ""hooks"": [
             ""OnPlayerSpectate(BasePlayer,string)"",
             ""OnFuelConsumed(BaseOven,Item,ItemModBurnable)"",

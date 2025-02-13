@@ -21,13 +21,16 @@ namespace RustAnalyzer
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: "All Rust plugins must be defined in the Oxide.Plugins namespace.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000020.md");
+            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000020.md"
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
@@ -41,20 +44,29 @@ namespace RustAnalyzer
             var namespaceName = namespaceDeclaration.Name.ToString();
 
             // Проверяем, есть ли в пространстве имён класс, унаследованный от RustPlugin
-            var hasRustPlugin = namespaceDeclaration.DescendantNodes()
+            var hasRustPlugin = namespaceDeclaration
+                .DescendantNodes()
                 .OfType<ClassDeclarationSyntax>()
-                .Any(classDecl => classDecl.BaseList?.Types
-                    .Any(baseType => baseType.ToString().Contains("RustPlugin")) == true);
+                .Any(classDecl =>
+                    classDecl.BaseList?.Types.Any(baseType =>
+                        baseType.ToString().Contains("RustPlugin")
+                    ) == true
+                );
 
-            if (!hasRustPlugin) return;
+            if (!hasRustPlugin)
+                return;
 
             // Если это плагин, но пространство имён не Oxide.Plugins
             if (namespaceName != RequiredNamespace)
             {
-                var diagnostic = Diagnostic.Create(Rule, namespaceDeclaration.Name.GetLocation(), 
-                    RequiredNamespace, namespaceName);
+                var diagnostic = Diagnostic.Create(
+                    Rule,
+                    namespaceDeclaration.Name.GetLocation(),
+                    RequiredNamespace,
+                    namespaceName
+                );
                 context.ReportDiagnostic(diagnostic);
             }
         }
     }
-} 
+}

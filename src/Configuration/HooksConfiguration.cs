@@ -1,14 +1,14 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
-using RustAnalyzer.Models;
-using RustAnalyzer.Utils;
-using RustAnalyzer.src.Hooks.Providers;
-using RustAnalyzer.src.Hooks.Interfaces;
 using RustAnalyzer.Configuration;
+using RustAnalyzer.Models;
+using RustAnalyzer.src.Hooks.Interfaces;
+using RustAnalyzer.src.Hooks.Providers;
 using RustAnalyzer.src.Services;
+using RustAnalyzer.Utils;
 
 namespace RustAnalyzer
 {
@@ -42,20 +42,22 @@ namespace RustAnalyzer
 
                 var regularHooks = regularProvider.GetHooks();
                 var providerHooks = provider.GetHooks();
-                
+
                 var allHooks = new List<HookModel>();
                 var processedHookSignatures = new HashSet<string>();
-                
+
                 foreach (var hook in regularHooks)
                 {
                     allHooks.Add(hook);
-                    var signature = $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
+                    var signature =
+                        $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
                     processedHookSignatures.Add(signature);
                 }
-                
+
                 foreach (var hook in providerHooks)
                 {
-                    var signature = $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
+                    var signature =
+                        $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
                     if (!processedHookSignatures.Contains(signature))
                     {
                         allHooks.Add(hook);
@@ -89,12 +91,16 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsRustClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsRustClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
-            if (methodSignature == null) return false;
+            if (methodSignature == null)
+                return false;
 
             // Находим все хуки с таким же именем
             var matchingHooks = _hooks.Where(s => s.HookName == methodSignature.HookName).ToList();
@@ -131,8 +137,11 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsKnownHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsRustClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsRustClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
@@ -145,7 +154,10 @@ namespace RustAnalyzer
         /// <summary>
         /// Returns hooks with similar names to the method.
         /// </summary>
-        public static IEnumerable<HookModel> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
+        public static IEnumerable<HookModel> GetSimilarHooks(
+            IMethodSymbol method,
+            int maxSuggestions = 3
+        )
         {
             if (method == null)
                 return Enumerable.Empty<HookModel>();
@@ -154,16 +166,16 @@ namespace RustAnalyzer
                 return Enumerable.Empty<HookModel>();
 
             // Включаем полную сигнатуру в текст для сравнения
-            var candidates = _hooks.Select(h => (
-                text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})", 
-                context: h));
+            var candidates = _hooks.Select(h =>
+                (
+                    text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})",
+                    context: h
+                )
+            );
 
-            return StringSimilarity.FindSimilarWithContext(
-                method.Name,
-                candidates,
-                maxSuggestions)
+            return StringSimilarity
+                .FindSimilarWithContext(method.Name, candidates, maxSuggestions)
                 .Select(r => r.Context);
         }
     }
 }
-

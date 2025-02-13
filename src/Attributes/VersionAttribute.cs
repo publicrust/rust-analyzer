@@ -12,4 +12,4 @@ namespace RustAnalyzer.src.Attributes
             Version = version ?? throw new ArgumentNullException(nameof(version));
         }
     }
-} 
+}

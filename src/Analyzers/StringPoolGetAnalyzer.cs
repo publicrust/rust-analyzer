@@ -1,14 +1,14 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
+using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.src.Configuration;
 using RustAnalyzer.src.Models.StringPool;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Threading;
 
 namespace RustAnalyzer.Analyzers
 {
@@ -18,8 +18,10 @@ namespace RustAnalyzer.Analyzers
         public const string DiagnosticId = "RUST0005";
 
         private static readonly string Title = "Invalid prefab name";
-        private static readonly string MessageFormat = "String '{0}' does not exist in StringPool{1}";
-        private static readonly string Description = "Prefab names must exist in StringPool when used with BaseNetworkable properties or methods that eventually call StringPool.Get(). This ensures runtime safety and prevents potential errors.";
+        private static readonly string MessageFormat =
+            "String '{0}' does not exist in StringPool{1}";
+        private static readonly string Description =
+            "Prefab names must exist in StringPool when used with BaseNetworkable properties or methods that eventually call StringPool.Get(). This ensures runtime safety and prevents potential errors.";
         private const string Category = "Correctness";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
@@ -29,9 +31,11 @@ namespace RustAnalyzer.Analyzers
             Category,
             DiagnosticSeverity.Error,
             isEnabledByDefault: true,
-            description: Description);
+            description: Description
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -43,8 +47,14 @@ namespace RustAnalyzer.Analyzers
         private void InitializePerCompilation(CompilationStartAnalysisContext context)
         {
             var compilationAnalyzer = new CompilationAnalyzer(context.Compilation);
-            context.RegisterSyntaxNodeAction(compilationAnalyzer.AnalyzeBinaryExpression, SyntaxKind.EqualsExpression);
-            context.RegisterSyntaxNodeAction(compilationAnalyzer.AnalyzeInvocationExpression, SyntaxKind.InvocationExpression);
+            context.RegisterSyntaxNodeAction(
+                compilationAnalyzer.AnalyzeBinaryExpression,
+                SyntaxKind.EqualsExpression
+            );
+            context.RegisterSyntaxNodeAction(
+                compilationAnalyzer.AnalyzeInvocationExpression,
+                SyntaxKind.InvocationExpression
+            );
         }
 
         private class CompilationAnalyzer
@@ -55,7 +65,9 @@ namespace RustAnalyzer.Analyzers
             public CompilationAnalyzer(Compilation compilation)
             {
                 _compilation = compilation;
-                _methodCallCache = new Dictionary<IMethodSymbol, bool>(SymbolEqualityComparer.Default);
+                _methodCallCache = new Dictionary<IMethodSymbol, bool>(
+                    SymbolEqualityComparer.Default
+                );
             }
 
             private bool MethodCallsKnownMethod(IMethodSymbol methodSymbol)
@@ -75,16 +87,20 @@ namespace RustAnalyzer.Analyzers
 
                     var semanticModel = _compilation.GetSemanticModel(methodDeclaration.SyntaxTree);
 
-                    var invocations = methodDeclaration.DescendantNodes().OfType<InvocationExpressionSyntax>();
+                    var invocations = methodDeclaration
+                        .DescendantNodes()
+                        .OfType<InvocationExpressionSyntax>();
                     foreach (var invocation in invocations)
                     {
-                        var invokedMethodSymbol = semanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
+                        var invokedMethodSymbol =
+                            semanticModel.GetSymbolInfo(invocation).Symbol as IMethodSymbol;
                         if (invokedMethodSymbol == null)
                             continue;
 
                         var methodConfig = StringPoolConfiguration.GetMethodConfig(
                             invokedMethodSymbol.ContainingType.Name,
-                            invokedMethodSymbol.Name);
+                            invokedMethodSymbol.Name
+                        );
 
                         if (methodConfig != null)
                         {
@@ -92,7 +108,10 @@ namespace RustAnalyzer.Analyzers
                             return true;
                         }
 
-                        if (invokedMethodSymbol.MethodKind == MethodKind.Ordinary && !invokedMethodSymbol.Equals(methodSymbol))
+                        if (
+                            invokedMethodSymbol.MethodKind == MethodKind.Ordinary
+                            && !invokedMethodSymbol.Equals(methodSymbol)
+                        )
                         {
                             if (MethodCallsKnownMethod(invokedMethodSymbol))
                             {
@@ -121,8 +140,22 @@ namespace RustAnalyzer.Analyzers
                 var leftLiteral = binaryExpression.Left as LiteralExpressionSyntax;
                 var rightLiteral = binaryExpression.Right as LiteralExpressionSyntax;
 
-                if (!IsValidPrefabNameComparison(context, leftMemberAccess, leftLiteral, rightMemberAccess, rightLiteral) &&
-                    !IsValidPrefabNameComparison(context, rightMemberAccess, rightLiteral, leftMemberAccess, leftLiteral))
+                if (
+                    !IsValidPrefabNameComparison(
+                        context,
+                        leftMemberAccess,
+                        leftLiteral,
+                        rightMemberAccess,
+                        rightLiteral
+                    )
+                    && !IsValidPrefabNameComparison(
+                        context,
+                        rightMemberAccess,
+                        rightLiteral,
+                        leftMemberAccess,
+                        leftLiteral
+                    )
+                )
                 {
                     return;
                 }
@@ -142,7 +175,8 @@ namespace RustAnalyzer.Analyzers
 
                 var methodConfig = StringPoolConfiguration.GetMethodConfig(
                     methodSymbol.ContainingType.Name,
-                    methodSymbol.Name);
+                    methodSymbol.Name
+                );
 
                 if (methodConfig == null)
                     return;
@@ -158,7 +192,11 @@ namespace RustAnalyzer.Analyzers
                 }
             }
 
-            private void AnalyzeArgument(SyntaxNodeAnalysisContext context, ExpressionSyntax argument, PrefabNameCheckType checkType)
+            private void AnalyzeArgument(
+                SyntaxNodeAnalysisContext context,
+                ExpressionSyntax argument,
+                PrefabNameCheckType checkType
+            )
             {
                 var semanticModel = context.SemanticModel;
 
@@ -173,7 +211,10 @@ namespace RustAnalyzer.Analyzers
                 else
                 {
                     var typeInfo = semanticModel.GetTypeInfo(argument);
-                    if (typeInfo.Type == null || typeInfo.Type.SpecialType != SpecialType.System_String)
+                    if (
+                        typeInfo.Type == null
+                        || typeInfo.Type.SpecialType != SpecialType.System_String
+                    )
                         return;
 
                     var symbol = semanticModel.GetSymbolInfo(argument).Symbol;
@@ -188,7 +229,12 @@ namespace RustAnalyzer.Analyzers
                 }
             }
 
-            private void CheckStringValue(SyntaxNodeAnalysisContext context, string value, Location location, PrefabNameCheckType checkType)
+            private void CheckStringValue(
+                SyntaxNodeAnalysisContext context,
+                string value,
+                Location location,
+                PrefabNameCheckType checkType
+            )
             {
                 if (checkType == PrefabNameCheckType.FullPath)
                 {
@@ -216,38 +262,61 @@ namespace RustAnalyzer.Analyzers
                 }
             }
 
-            private Dictionary<string, Location> GetStringLiteralsFromSymbol(ISymbol symbol, SemanticModel semanticModel)
+            private Dictionary<string, Location> GetStringLiteralsFromSymbol(
+                ISymbol symbol,
+                SemanticModel semanticModel
+            )
             {
                 var literals = new Dictionary<string, Location>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var syntaxRef in symbol.DeclaringSyntaxReferences)
                 {
                     var node = syntaxRef.GetSyntax();
-                    if (node is VariableDeclaratorSyntax variableDeclarator && variableDeclarator.Initializer != null)
+                    if (
+                        node is VariableDeclaratorSyntax variableDeclarator
+                        && variableDeclarator.Initializer != null
+                    )
                     {
                         var value = variableDeclarator.Initializer.Value;
-                        if (value is LiteralExpressionSyntax literal && literal.IsKind(SyntaxKind.StringLiteralExpression))
+                        if (
+                            value is LiteralExpressionSyntax literal
+                            && literal.IsKind(SyntaxKind.StringLiteralExpression)
+                        )
                         {
                             literals[literal.Token.ValueText] = literal.GetLocation();
                         }
                     }
                     else if (node is ParameterSyntax parameterSyntax)
                     {
-                        var parameterSymbol = semanticModel.GetDeclaredSymbol(parameterSyntax) as IParameterSymbol;
+                        var parameterSymbol =
+                            semanticModel.GetDeclaredSymbol(parameterSyntax) as IParameterSymbol;
                         if (parameterSymbol != null)
                         {
                             var methodSymbol = parameterSymbol.ContainingSymbol as IMethodSymbol;
                             if (methodSymbol != null)
                             {
-                                var callers = FindMethodCallers(methodSymbol, semanticModel.Compilation);
+                                var callers = FindMethodCallers(
+                                    methodSymbol,
+                                    semanticModel.Compilation
+                                );
                                 foreach (var caller in callers)
                                 {
-                                    if (caller.ArgumentList.Arguments.Count > parameterSymbol.Ordinal)
+                                    if (
+                                        caller.ArgumentList.Arguments.Count
+                                        > parameterSymbol.Ordinal
+                                    )
                                     {
-                                        var arg = caller.ArgumentList.Arguments[parameterSymbol.Ordinal].Expression;
-                                        if (arg is LiteralExpressionSyntax argLiteral && argLiteral.IsKind(SyntaxKind.StringLiteralExpression))
+                                        var arg = caller
+                                            .ArgumentList
+                                            .Arguments[parameterSymbol.Ordinal]
+                                            .Expression;
+                                        if (
+                                            arg is LiteralExpressionSyntax argLiteral
+                                            && argLiteral.IsKind(SyntaxKind.StringLiteralExpression)
+                                        )
                                         {
-                                            literals[argLiteral.Token.ValueText] = argLiteral.GetLocation();
+                                            literals[argLiteral.Token.ValueText] =
+                                                argLiteral.GetLocation();
                                         }
                                     }
                                 }
@@ -261,7 +330,8 @@ namespace RustAnalyzer.Analyzers
 
             private IEnumerable<InvocationExpressionSyntax> FindMethodCallers(
                 IMethodSymbol methodSymbol,
-                Compilation compilation)
+                Compilation compilation
+            )
             {
                 var callers = new List<InvocationExpressionSyntax>();
 
@@ -276,7 +346,8 @@ namespace RustAnalyzer.Analyzers
                         {
                             var symbolInfo = semanticModel.GetSymbolInfo(invocation);
                             var symbol = symbolInfo.Symbol;
-                            return symbol != null && SymbolEqualityComparer.Default.Equals(symbol, methodSymbol);
+                            return symbol != null
+                                && SymbolEqualityComparer.Default.Equals(symbol, methodSymbol);
                         });
 
                     callers.AddRange(invocations);
@@ -290,19 +361,22 @@ namespace RustAnalyzer.Analyzers
                 MemberAccessExpressionSyntax? leftMember,
                 LiteralExpressionSyntax? leftLiteral,
                 MemberAccessExpressionSyntax? rightMember,
-                LiteralExpressionSyntax? rightLiteral)
+                LiteralExpressionSyntax? rightLiteral
+            )
             {
-               
-                
-                if ((leftMember == null && rightMember == null) || (leftLiteral == null && rightLiteral == null))
+                if (
+                    (leftMember == null && rightMember == null)
+                    || (leftLiteral == null && rightLiteral == null)
+                )
                 {
-                   
                     return false;
                 }
 
-                if ((leftMember != null && rightMember != null) || (leftLiteral != null && rightLiteral != null))
+                if (
+                    (leftMember != null && rightMember != null)
+                    || (leftLiteral != null && rightLiteral != null)
+                )
                 {
-                   
                     return false;
                 }
 
@@ -310,66 +384,67 @@ namespace RustAnalyzer.Analyzers
 
                 if (memberAccess == null)
                 {
-                   
                     return false;
                 }
 
                 var propertyName = memberAccess.Name.Identifier.Text;
-               
 
                 var typeInfo = context.SemanticModel.GetTypeInfo(memberAccess.Expression);
                 var objectType = typeInfo.Type;
                 if (objectType == null)
                 {
-                   
                     return false;
                 }
-
-               
 
                 var currentType = objectType;
                 while (currentType != null)
                 {
                     var currentTypeName = currentType.ToDisplayString();
-                   
 
-                    var propertyConfig = StringPoolConfiguration.GetPropertyConfig(currentTypeName, propertyName);
+                    var propertyConfig = StringPoolConfiguration.GetPropertyConfig(
+                        currentTypeName,
+                        propertyName
+                    );
                     if (propertyConfig == null)
                     {
-                        propertyConfig = StringPoolConfiguration.GetPropertyConfig($"global::{currentTypeName}", propertyName);
+                        propertyConfig = StringPoolConfiguration.GetPropertyConfig(
+                            $"global::{currentTypeName}",
+                            propertyName
+                        );
                     }
 
                     if (propertyConfig != null)
                     {
-                       
                         var literal = leftLiteral ?? rightLiteral;
                         if (literal != null)
                         {
                             var value = literal.Token.ValueText;
-                           
-                            CheckStringValue(context, value, literal.GetLocation(), propertyConfig.CheckType);
+
+                            CheckStringValue(
+                                context,
+                                value,
+                                literal.GetLocation(),
+                                propertyConfig.CheckType
+                            );
                         }
                         return true;
                     }
 
                     currentType = currentType.BaseType;
-                    if (currentType != null)
-                    {
-                       
-                    }
+                    if (currentType != null) { }
                 }
 
-               
                 return false;
             }
 
-            private void ReportDiagnostic(SyntaxNodeAnalysisContext context, Location location, string message, string suggestion)
+            private void ReportDiagnostic(
+                SyntaxNodeAnalysisContext context,
+                Location location,
+                string message,
+                string suggestion
+            )
             {
-                var diagnostic = Diagnostic.Create(
-                    Rule,
-                    location,
-                    message,
-                    suggestion);
+                var diagnostic = Diagnostic.Create(Rule, location, message, suggestion);
 
                 context.ReportDiagnostic(diagnostic);
             }
@@ -382,8 +457,10 @@ namespace RustAnalyzer.Analyzers
                 var root = tree.GetRoot(cancellationToken);
                 foreach (var trivia in root.GetLeadingTrivia())
                 {
-                    if (trivia.IsKind(SyntaxKind.SingleLineCommentTrivia) ||
-                        trivia.IsKind(SyntaxKind.MultiLineCommentTrivia))
+                    if (
+                        trivia.IsKind(SyntaxKind.SingleLineCommentTrivia)
+                        || trivia.IsKind(SyntaxKind.MultiLineCommentTrivia)
+                    )
                     {
                         var text = trivia.ToFullString();
                         if (text.Contains("<auto-generated"))

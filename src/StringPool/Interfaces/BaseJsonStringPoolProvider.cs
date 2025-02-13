@@ -1,19 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text.Json;
 using RustAnalyzer.src.Attributes;
-using System.Reflection;
 
 namespace RustAnalyzer.src.StringPool.Interfaces
 {
     public abstract class BaseJsonStringPoolProvider : IStringPoolProvider
     {
-        public virtual string Version => GetType()
-            .GetCustomAttribute<VersionAttribute>()
-            ?.Version ?? throw new InvalidOperationException("Version attribute is required");
+        public virtual string Version =>
+            GetType().GetCustomAttribute<VersionAttribute>()?.Version
+            ?? throw new InvalidOperationException("Version attribute is required");
 
         protected abstract string JsonContent { get; }
-        
+
         public Dictionary<string, uint> GetToNumber()
         {
             try
@@ -37,4 +37,4 @@ namespace RustAnalyzer.src.StringPool.Interfaces
             }
         }
     }
-} 
+}
