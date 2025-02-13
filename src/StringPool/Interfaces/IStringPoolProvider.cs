@@ -7,4 +7,4 @@ namespace RustAnalyzer.src.StringPool.Interfaces
         string Version { get; }
         Dictionary<string, uint> GetToNumber();
     }
-} 
+}
