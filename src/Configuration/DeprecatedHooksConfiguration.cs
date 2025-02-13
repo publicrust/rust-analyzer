@@ -41,10 +41,12 @@ namespace RustAnalyzer.src.Configuration
         public static bool IsHook(IMethodSymbol method, out DeprecatedHookModel? hookInfo)
         {
             hookInfo = null;
-            if (method == null) return false;
+            if (method == null)
+                return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
-            if (methodSignature == null) return false;
+            if (methodSignature == null)
+                return false;
 
             foreach (var hook in _hooks)
             {
@@ -60,7 +62,10 @@ namespace RustAnalyzer.src.Configuration
                 bool allParametersMatch = true;
                 for (int i = 0; i < methodSignature.HookParameters.Count; i++)
                 {
-                    if (hook.OldHook.HookParameters[i].Type != methodSignature.HookParameters[i].Type)
+                    if (
+                        hook.OldHook.HookParameters[i].Type
+                        != methodSignature.HookParameters[i].Type
+                    )
                     {
                         allParametersMatch = false;
                         break;

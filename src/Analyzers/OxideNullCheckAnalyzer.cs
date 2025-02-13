@@ -1,9 +1,9 @@
+using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using System.Collections.Immutable;
-using System.Linq;
 using RustAnalyzer;
 
 namespace OxideAnalyzers
@@ -13,33 +13,33 @@ namespace OxideAnalyzers
     {
         public const string DiagnosticId = "OXD001";
 
-        private static readonly LocalizableString Title = 
+        private static readonly LocalizableString Title =
             "Object should be checked for null before use";
 
-        private static readonly LocalizableString MessageFormat = 
+        private static readonly LocalizableString MessageFormat =
             "'{0}' at line {1} in hook {2} should be checked for null before use";
 
-        private static readonly LocalizableString Description = 
+        private static readonly LocalizableString Description =
             "Objects in Oxide/uMod hooks should be checked for null before accessing their members to prevent NullReferenceException.";
 
         private const string Category = "Usage";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
-            DiagnosticId, 
-            Title, 
-            MessageFormat, 
-            Category, 
-            DiagnosticSeverity.Warning, 
-            isEnabledByDefault: true, 
-            description: Description);
+            DiagnosticId,
+            Title,
+            MessageFormat,
+            Category,
+            DiagnosticSeverity.Warning,
+            isEnabledByDefault: true,
+            description: Description
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => 
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
-            context.ConfigureGeneratedCodeAnalysis(
-                GeneratedCodeAnalysisFlags.None);
+            context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
             context.RegisterSyntaxNodeAction(AnalyzeMethod, SyntaxKind.MethodDeclaration);
@@ -49,22 +49,27 @@ namespace OxideAnalyzers
         {
             var methodDeclaration = (MethodDeclarationSyntax)context.Node;
             var methodSymbol = context.SemanticModel.GetDeclaredSymbol(methodDeclaration);
-            
-            if (methodSymbol == null) return;
 
-            if (!HooksConfiguration.IsHook(methodSymbol) && 
-                !PluginHooksConfiguration.IsHook(methodSymbol))
+            if (methodSymbol == null)
+                return;
+
+            if (
+                !HooksConfiguration.IsHook(methodSymbol)
+                && !PluginHooksConfiguration.IsHook(methodSymbol)
+            )
                 return;
 
             // Получаем полную сигнатуру хука для сообщения об ошибке
-            var hookSignature = $"{methodSymbol.Name}({string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type.Name} {p.Name}"))})";
+            var hookSignature =
+                $"{methodSymbol.Name}({string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type.Name} {p.Name}"))})";
 
             var parameters = methodDeclaration.ParameterList.Parameters;
-            
+
             foreach (var parameter in parameters)
             {
-                if (parameter.Type == null) continue;
-                
+                if (parameter.Type == null)
+                    continue;
+
                 var parameterType = context.SemanticModel.GetTypeInfo(parameter.Type);
                 if (parameterType.Type == null || parameterType.Type.IsValueType)
                     continue;
@@ -74,18 +79,21 @@ namespace OxideAnalyzers
                     continue;
 
                 // Находим все обращения к параметру (методы и свойства)
-                var memberAccesses = methodDeclaration.DescendantNodes()
+                var memberAccesses = methodDeclaration
+                    .DescendantNodes()
                     .OfType<MemberAccessExpressionSyntax>()
-                    .Where(ma => 
+                    .Where(ma =>
                     {
                         // Проверяем, что это обращение к нашему параметру
-                        if (!(ma.Expression is IdentifierNameSyntax id) || 
-                            id.Identifier.Text != parameter.Identifier.Text)
+                        if (
+                            !(ma.Expression is IdentifierNameSyntax id)
+                            || id.Identifier.Text != parameter.Identifier.Text
+                        )
                             return false;
 
                         // Получаем символ члена
                         var memberSymbol = context.SemanticModel.GetSymbolInfo(ma).Symbol;
-                        
+
                         // Проверяем все члены (методы, свойства, поля)
                         return memberSymbol != null;
                     })
@@ -94,31 +102,36 @@ namespace OxideAnalyzers
                 foreach (var memberAccess in memberAccesses)
                 {
                     var memberName = memberAccess.Name.Identifier.Text;
-                    var lineNumber = memberAccess.GetLocation()
-                        .GetLineSpan()
-                        .StartLinePosition
-                        .Line + 1;
+                    var lineNumber =
+                        memberAccess.GetLocation().GetLineSpan().StartLinePosition.Line + 1;
 
                     // Проверяем, находится ли это обращение внутри проверки на null
                     var isInsideNullCheck = false;
                     var currentNode = memberAccess.Parent;
 
                     // Собираем все проверки if до текущего использования
-                    var previousChecks = methodDeclaration.DescendantNodes()
+                    var previousChecks = methodDeclaration
+                        .DescendantNodes()
                         .OfType<IfStatementSyntax>()
                         .TakeWhile(ifStmt => ifStmt.SpanStart < memberAccess.SpanStart)
                         .Select(ifStmt => ifStmt.Condition.ToString())
                         .ToList();
 
                     // Проверяем все предыдущие условия
-                    if (previousChecks.Any(condition => 
-                        condition.Contains($"{parameter.Identifier.Text} == null") ||
-                        condition.Contains($"{parameter.Identifier.Text}?.") ||
-                        condition.Contains($"{parameter.Identifier.Text} is null") ||
-                        condition.Contains($"!{parameter.Identifier.Text}.IsValid()") ||  // Добавляем проверку IsValid()
-                        condition.Contains($"{parameter.Identifier.Text}.{memberName} == null") ||
-                        condition.Contains($"{parameter.Identifier.Text}?.{memberName}") ||
-                        condition.Contains($"{parameter.Identifier.Text}.{memberName} is null")))
+                    if (
+                        previousChecks.Any(condition =>
+                            condition.Contains($"{parameter.Identifier.Text} == null")
+                            || condition.Contains($"{parameter.Identifier.Text}?.")
+                            || condition.Contains($"{parameter.Identifier.Text} is null")
+                            || condition.Contains($"!{parameter.Identifier.Text}.IsValid()")
+                            || // Добавляем проверку IsValid()
+                            condition.Contains($"{parameter.Identifier.Text}.{memberName} == null")
+                            || condition.Contains($"{parameter.Identifier.Text}?.{memberName}")
+                            || condition.Contains(
+                                $"{parameter.Identifier.Text}.{memberName} is null"
+                            )
+                        )
+                    )
                     {
                         isInsideNullCheck = true;
                     }
@@ -130,13 +143,22 @@ namespace OxideAnalyzers
                             if (currentNode is IfStatementSyntax ifStatement)
                             {
                                 var condition = ifStatement.Condition.ToString();
-                                if (condition.Contains($"{parameter.Identifier.Text} == null") ||
-                                    condition.Contains($"{parameter.Identifier.Text}?.") ||
-                                    condition.Contains($"{parameter.Identifier.Text} is null") ||
-                                    condition.Contains($"!{parameter.Identifier.Text}.IsValid()") ||  // Добавляем проверку IsValid()
-                                    condition.Contains($"{parameter.Identifier.Text}.{memberName} == null") ||
-                                    condition.Contains($"{parameter.Identifier.Text}?.{memberName}") ||
-                                    condition.Contains($"{parameter.Identifier.Text}.{memberName} is null"))
+                                if (
+                                    condition.Contains($"{parameter.Identifier.Text} == null")
+                                    || condition.Contains($"{parameter.Identifier.Text}?.")
+                                    || condition.Contains($"{parameter.Identifier.Text} is null")
+                                    || condition.Contains($"!{parameter.Identifier.Text}.IsValid()")
+                                    || // Добавляем проверку IsValid()
+                                    condition.Contains(
+                                        $"{parameter.Identifier.Text}.{memberName} == null"
+                                    )
+                                    || condition.Contains(
+                                        $"{parameter.Identifier.Text}?.{memberName}"
+                                    )
+                                    || condition.Contains(
+                                        $"{parameter.Identifier.Text}.{memberName} is null"
+                                    )
+                                )
                                 {
                                     isInsideNullCheck = true;
                                     break;
@@ -148,15 +170,17 @@ namespace OxideAnalyzers
 
                     if (!isInsideNullCheck)
                     {
-                        var diagnostic = Diagnostic.Create(Rule, 
-                            memberAccess.GetLocation(), 
+                        var diagnostic = Diagnostic.Create(
+                            Rule,
+                            memberAccess.GetLocation(),
                             $"{parameter.Identifier.Text}.{memberName}",
                             lineNumber,
-                            hookSignature);
+                            hookSignature
+                        );
                         context.ReportDiagnostic(diagnostic);
                     }
                 }
             }
         }
     }
-} 
+}

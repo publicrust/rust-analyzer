@@ -1,12 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
-using System.Diagnostics;
-using System;
 
 namespace RustAnalyzer
 {
@@ -16,13 +16,12 @@ namespace RustAnalyzer
         public const string DiagnosticId = "RUST002";
         private const string Category = "Usage";
 
-        private static readonly LocalizableString Title = 
-            "Hook method has incorrect parameters";
+        private static readonly LocalizableString Title = "Hook method has incorrect parameters";
 
-        private static readonly LocalizableString MessageFormat = 
+        private static readonly LocalizableString MessageFormat =
             "Hook \"{0}\" has missing or incorrect parameters. Expected: {1}";
 
-        private static readonly LocalizableString Description = 
+        private static readonly LocalizableString Description =
             "Hook methods must be implemented with the correct parameter types to be called by Oxide";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
@@ -32,9 +31,11 @@ namespace RustAnalyzer
             Category,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            description: Description);
+            description: Description
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
@@ -56,11 +57,13 @@ namespace RustAnalyzer
             // Check if it's a known hook
             if (HooksConfiguration.IsKnownHook(methodSymbol))
             {
-                if(!HooksConfiguration.IsHook(methodSymbol))
+                if (!HooksConfiguration.IsHook(methodSymbol))
                 {
                     // Get the expected hook signature
-                    var expectedSignature = HooksConfiguration.HookSignatures
-                        .Where(h => h.HookName == methodSymbol.Name).Select(s => s.ToString()).ToArray();
+                    var expectedSignature = HooksConfiguration
+                        .HookSignatures.Where(h => h.HookName == methodSymbol.Name)
+                        .Select(s => s.ToString())
+                        .ToArray();
 
                     if (expectedSignature != null)
                     {
@@ -68,7 +71,8 @@ namespace RustAnalyzer
                             Rule,
                             methodDeclaration.Identifier.GetLocation(),
                             methodSymbol.Name,
-                            string.Join(",", expectedSignature));
+                            string.Join(",", expectedSignature)
+                        );
 
                         context.ReportDiagnostic(diagnostic);
                     }

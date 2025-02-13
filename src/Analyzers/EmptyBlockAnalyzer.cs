@@ -19,13 +19,16 @@ namespace RustAnalyzer
             defaultSeverity: DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
             description: "Code blocks should contain implementation. Empty blocks might indicate incomplete code.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000050.md");
+            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000050.md"
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
@@ -69,9 +72,9 @@ namespace RustAnalyzer
 
         private bool IsAutoPropertyAccessor(BlockSyntax block)
         {
-            return block.Parent is AccessorDeclarationSyntax accessor &&
-                   accessor.Parent is AccessorListSyntax accessorList &&
-                   accessorList.Parent is PropertyDeclarationSyntax;
+            return block.Parent is AccessorDeclarationSyntax accessor
+                && accessor.Parent is AccessorListSyntax accessorList
+                && accessorList.Parent is PropertyDeclarationSyntax;
         }
 
         private string GetParentContext(BlockSyntax block)
@@ -103,10 +106,10 @@ namespace RustAnalyzer
                     return "catch block";
                 if (parent is FinallyClauseSyntax)
                     return "finally block";
-                
+
                 parent = parent.Parent;
             }
             return "code block";
         }
     }
-} 
+}

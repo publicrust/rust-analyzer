@@ -1,6 +1,6 @@
-using Microsoft.CodeAnalysis;
 using System;
 using System.Linq;
+using Microsoft.CodeAnalysis;
 
 namespace RustAnalyzer.Utils
 {
@@ -13,14 +13,10 @@ namespace RustAnalyzer.Utils
         {
             "ChatCommand",
             "Command",
-            "ConsoleCommand"
+            "ConsoleCommand",
         };
 
-        private static readonly string[] CommandNameIndicators = new[]
-        {
-            "command",
-            "cmd"
-        };
+        private static readonly string[] CommandNameIndicators = new[] { "command", "cmd" };
 
         /// <summary>
         /// Проверяет, является ли метод командой на основе:
@@ -33,26 +29,36 @@ namespace RustAnalyzer.Utils
                 return false;
 
             // Проверяем наличие атрибутов команд
-            if (method.GetAttributes().Any(attr => 
-            {
-                if (attr.AttributeClass == null) return false;
-                var attrName = attr.AttributeClass.Name;
-                var attrFullName = attr.AttributeClass.ToDisplayString();
+            if (
+                method
+                    .GetAttributes()
+                    .Any(attr =>
+                    {
+                        if (attr.AttributeClass == null)
+                            return false;
+                        var attrName = attr.AttributeClass.Name;
+                        var attrFullName = attr.AttributeClass.ToDisplayString();
 
-                return CommandAttributes.Any(ca => 
-                    attrName.Equals(ca, StringComparison.OrdinalIgnoreCase) ||
-                    attrName.Equals(ca + "Attribute", StringComparison.OrdinalIgnoreCase) ||
-                    attrFullName.EndsWith($".{ca}", StringComparison.OrdinalIgnoreCase) ||
-                    attrFullName.EndsWith($".{ca}Attribute", StringComparison.OrdinalIgnoreCase));
-            }))
+                        return CommandAttributes.Any(ca =>
+                            attrName.Equals(ca, StringComparison.OrdinalIgnoreCase)
+                            || attrName.Equals(ca + "Attribute", StringComparison.OrdinalIgnoreCase)
+                            || attrFullName.EndsWith($".{ca}", StringComparison.OrdinalIgnoreCase)
+                            || attrFullName.EndsWith(
+                                $".{ca}Attribute",
+                                StringComparison.OrdinalIgnoreCase
+                            )
+                        );
+                    })
+            )
             {
                 return true;
             }
 
             // Проверяем имя метода на наличие индикаторов команды
             var methodNameLower = method.Name.ToLowerInvariant();
-            return CommandNameIndicators.Any(indicator => 
-                methodNameLower.IndexOf(indicator, StringComparison.OrdinalIgnoreCase) >= 0);
+            return CommandNameIndicators.Any(indicator =>
+                methodNameLower.IndexOf(indicator, StringComparison.OrdinalIgnoreCase) >= 0
+            );
         }
     }
-} 
+}

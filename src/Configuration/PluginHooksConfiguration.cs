@@ -1,12 +1,12 @@
 using System;
-using System.Collections.Immutable;
-using System.Linq;
-using Microsoft.CodeAnalysis;
 using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Diagnostics;
+using System.Linq;
+using System.Text.Json;
+using Microsoft.CodeAnalysis;
 using RustAnalyzer.Models;
 using RustAnalyzer.Utils;
-using System.Diagnostics;
-using System.Text.Json;
 
 namespace RustAnalyzer
 {
@@ -27,7 +27,9 @@ namespace RustAnalyzer
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[RustAnalyzer] Failed to load plugin hooks PluginHooksConfiguration {ex.Message}");
+                Console.WriteLine(
+                    $"[RustAnalyzer] Failed to load plugin hooks PluginHooksConfiguration {ex.Message}"
+                );
                 _hooks = ImmutableList<PluginHookModel>.Empty;
             }
         }
@@ -42,16 +44,19 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsRustClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsRustClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
-            if (methodSignature == null) return false;
+            if (methodSignature == null)
+                return false;
 
             return _hooks.Any(s => s.HookName == methodSignature.HookName);
         }
-
 
         /// <summary>
         /// Checks if a given method signature exactly matches a known hook signature.
@@ -59,8 +64,11 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsKnownHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsRustClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsRustClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
@@ -73,17 +81,27 @@ namespace RustAnalyzer
         /// <summary>
         /// Returns hooks with similar names to the method along with their plugin sources.
         /// </summary>
-        public static IEnumerable<PluginHookModel> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
+        public static IEnumerable<PluginHookModel> GetSimilarHooks(
+            IMethodSymbol method,
+            int maxSuggestions = 3
+        )
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsRustClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsRustClass(method.ContainingType)
+            )
                 return Enumerable.Empty<PluginHookModel>();
 
-            var candidates = _hooks.Select(h => (
-                text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})", 
-                context: h));
+            var candidates = _hooks.Select(h =>
+                (
+                    text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})",
+                    context: h
+                )
+            );
 
-            return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
+            return StringSimilarity
+                .FindSimilarWithContext(method.Name, candidates, maxSuggestions)
                 .Select(r => r.Context);
         }
 
@@ -95,4 +113,4 @@ namespace RustAnalyzer
             return _hooks.FirstOrDefault(h => h.HookName == hookName);
         }
     }
-} 
+}

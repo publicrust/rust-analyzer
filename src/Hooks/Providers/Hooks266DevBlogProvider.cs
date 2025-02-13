@@ -1,14 +1,15 @@
-using RustAnalyzer.src.Attributes;
-using RustAnalyzer.src.Hooks.Interfaces;
 using System;
 using System.Reflection;
+using RustAnalyzer.src.Attributes;
+using RustAnalyzer.src.Hooks.Interfaces;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
     [Version("266Dev")]
-    public class Hooks266DevBlogProvider : BaseJsonHooksProvider 
+    public class Hooks266DevBlogProvider : BaseJsonHooksProvider
     {
-        protected override string JsonContent => @"{
+        protected override string JsonContent =>
+            @"{
   ""hooks"": [
     ""CanAcceptItem(ItemContainer,Item,int)"",
     ""CanAdministerVending(BasePlayer,NPCVendingMachine)"",
@@ -597,4 +598,4 @@ namespace RustAnalyzer.src.Hooks.Providers
   ]
 }";
     }
-}   
+}

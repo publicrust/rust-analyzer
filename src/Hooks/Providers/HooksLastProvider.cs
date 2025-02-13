@@ -1,14 +1,15 @@
-using RustAnalyzer.src.Attributes;
-using RustAnalyzer.src.Hooks.Interfaces;
 using System;
 using System.Reflection;
+using RustAnalyzer.src.Attributes;
+using RustAnalyzer.src.Hooks.Interfaces;
 
 namespace RustAnalyzer.src.Hooks.Providers
 {
     [Version("LastVersion")]
-    public class HooksLastProvider : BaseJsonHooksProvider 
+    public class HooksLastProvider : BaseJsonHooksProvider
     {
-        protected override string JsonContent => @"{
+        protected override string JsonContent =>
+            @"{
   ""hooks"": [
     ""CanAcceptItem(ItemContainer container, Item item, int targetPos)"",
     ""CanAccessVendingMachine(DeliveryDroneConfig,VendingMachine)"",
@@ -783,4 +784,4 @@ namespace RustAnalyzer.src.Hooks.Providers
   ]
 }";
     }
-}   
+}

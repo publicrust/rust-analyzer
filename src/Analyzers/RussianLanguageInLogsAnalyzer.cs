@@ -1,11 +1,11 @@
-using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Diagnostics;
 using System;
 using System.Collections.Immutable;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
+using Microsoft.CodeAnalysis.CSharp.Syntax;
+using Microsoft.CodeAnalysis.Diagnostics;
 
 namespace RustAnalyzer.Analyzers
 {
@@ -14,8 +14,10 @@ namespace RustAnalyzer.Analyzers
     {
         public const string DiagnosticId = "RA0013";
         private const string Title = "Non-English language detected in logs";
-        private const string MessageFormat = "Only English language is allowed in logs. Found non-English characters: '{0}'";
-        private const string Description = "Using non-English characters in logs makes them harder to read and process. Use English only for better compatibility.";
+        private const string MessageFormat =
+            "Only English language is allowed in logs. Found non-English characters: '{0}'";
+        private const string Description =
+            "Using non-English characters in logs makes them harder to read and process. Use English only for better compatibility.";
         private const string Category = "Usage";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
@@ -25,27 +27,29 @@ namespace RustAnalyzer.Analyzers
             Category,
             DiagnosticSeverity.Warning,
             isEnabledByDefault: true,
-            description: Description);
+            description: Description
+        );
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics => ImmutableArray.Create(Rule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
-            
+
             context.RegisterSyntaxNodeAction(AnalyzeInvocation, SyntaxKind.InvocationExpression);
         }
 
         private void AnalyzeInvocation(SyntaxNodeAnalysisContext context)
         {
             var invocation = (InvocationExpressionSyntax)context.Node;
-            
+
             var methodName = invocation.Expression switch
             {
                 MemberAccessExpressionSyntax memberAccess => memberAccess.Name.Identifier.Text,
                 IdentifierNameSyntax identifier => identifier.Identifier.Text,
-                _ => null
+                _ => null,
             };
 
             if (methodName == null || !IsLoggingMethod(methodName))
@@ -70,7 +74,11 @@ namespace RustAnalyzer.Analyzers
                     {
                         if (content is InterpolatedStringTextSyntax textPart)
                         {
-                            CheckText(context, textPart.TextToken.ValueText, textPart.GetLocation());
+                            CheckText(
+                                context,
+                                textPart.TextToken.ValueText,
+                                textPart.GetLocation()
+                            );
                         }
                         else if (content is InterpolationSyntax interpolation)
                         {
@@ -108,16 +116,16 @@ namespace RustAnalyzer.Analyzers
 
         private bool IsLoggingMethod(string methodName)
         {
-            return methodName.Equals("Puts", StringComparison.OrdinalIgnoreCase) ||
-                   methodName.Equals("Print", StringComparison.OrdinalIgnoreCase) ||
-                   methodName.Equals("Log", StringComparison.OrdinalIgnoreCase) ||
-                   methodName.Contains("Log") ||
-                   methodName.Contains("Console") ||
-                   methodName.Contains("Debug") ||
-                   methodName.Contains("Trace") ||
-                   methodName.Contains("Info") ||
-                   methodName.Contains("Error") ||
-                   methodName.Contains("Warning");
+            return methodName.Equals("Puts", StringComparison.OrdinalIgnoreCase)
+                || methodName.Equals("Print", StringComparison.OrdinalIgnoreCase)
+                || methodName.Equals("Log", StringComparison.OrdinalIgnoreCase)
+                || methodName.Contains("Log")
+                || methodName.Contains("Console")
+                || methodName.Contains("Debug")
+                || methodName.Contains("Trace")
+                || methodName.Contains("Info")
+                || methodName.Contains("Error")
+                || methodName.Contains("Warning");
         }
 
         private string GetNonEnglishCharacters(string text)
@@ -134,23 +142,52 @@ namespace RustAnalyzer.Analyzers
         private bool IsAllowedCharacter(char c)
         {
             // Разрешенные диапазоны символов:
-            return (c >= 'a' && c <= 'z') || // Маленькие английские буквы
-                   (c >= 'A' && c <= 'Z') || // Большие английские буквы
-                   (c >= '0' && c <= '9') || // Цифры
-                   char.IsWhiteSpace(c) ||   // Пробелы, табуляции, переносы строк
-                   IsAllowedPunctuation(c);  // Разрешенная пунктуация
+            return (c >= 'a' && c <= 'z')
+                || // Маленькие английские буквы
+                (c >= 'A' && c <= 'Z')
+                || // Большие английские буквы
+                (c >= '0' && c <= '9')
+                || // Цифры
+                char.IsWhiteSpace(c)
+                || // Пробелы, табуляции, переносы строк
+                IsAllowedPunctuation(c); // Разрешенная пунктуация
         }
 
         private bool IsAllowedPunctuation(char c)
         {
             // Разрешенные символы пунктуации и специальные символы
-            return c == '.' || c == ',' || c == '!' || c == '?' || c == '-' ||
-                   c == '_' || c == ':' || c == ';' || c == '(' || c == ')' ||
-                   c == '[' || c == ']' || c == '{' || c == '}' || c == '/' ||
-                   c == '\\' || c == '"' || c == '\'' || c == '+' || c == '=' ||
-                   c == '<' || c == '>' || c == '@' || c == '#' || c == '$' ||
-                   c == '%' || c == '^' || c == '&' || c == '*' || c == '|' ||
-                   c == '~' || c == '`';
+            return c == '.'
+                || c == ','
+                || c == '!'
+                || c == '?'
+                || c == '-'
+                || c == '_'
+                || c == ':'
+                || c == ';'
+                || c == '('
+                || c == ')'
+                || c == '['
+                || c == ']'
+                || c == '{'
+                || c == '}'
+                || c == '/'
+                || c == '\\'
+                || c == '"'
+                || c == '\''
+                || c == '+'
+                || c == '='
+                || c == '<'
+                || c == '>'
+                || c == '@'
+                || c == '#'
+                || c == '$'
+                || c == '%'
+                || c == '^'
+                || c == '&'
+                || c == '*'
+                || c == '|'
+                || c == '~'
+                || c == '`';
         }
     }
-} 
+}

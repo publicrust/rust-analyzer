@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Immutable;
-using System.Linq;
 using System.Diagnostics;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
@@ -20,37 +20,44 @@ namespace RustAnalyzer
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: "The called method is not defined in the plugin's configuration.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000040.md");
+            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000040.md"
+        );
 
-        private static readonly DiagnosticDescriptor InvalidParametersRule = new DiagnosticDescriptor(
-            id: "RUST000041",
-            title: "Invalid method parameters",
-            messageFormat: "Method '{0}' of plugin '{1}' expects parameters: {2}",
-            category: "Usage",
-            defaultSeverity: DiagnosticSeverity.Error,
-            isEnabledByDefault: true,
-            description: "The method call has invalid parameters.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000041.md");
+        private static readonly DiagnosticDescriptor InvalidParametersRule =
+            new DiagnosticDescriptor(
+                id: "RUST000041",
+                title: "Invalid method parameters",
+                messageFormat: "Method '{0}' of plugin '{1}' expects parameters: {2}",
+                category: "Usage",
+                defaultSeverity: DiagnosticSeverity.Error,
+                isEnabledByDefault: true,
+                description: "The method call has invalid parameters.",
+                helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000041.md"
+            );
 
-        private static readonly DiagnosticDescriptor InvalidGenericTypeRule = new DiagnosticDescriptor(
-            id: "RUST000043",
-            title: "Invalid generic type for plugin method",
-            messageFormat: "Method '{0}' returns '{1}' but trying to use as '{2}'",
-            category: "Usage",
-            defaultSeverity: DiagnosticSeverity.Error,
-            isEnabledByDefault: true,
-            description: "The generic type parameter does not match the method's return type.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000043.md");
+        private static readonly DiagnosticDescriptor InvalidGenericTypeRule =
+            new DiagnosticDescriptor(
+                id: "RUST000043",
+                title: "Invalid generic type for plugin method",
+                messageFormat: "Method '{0}' returns '{1}' but trying to use as '{2}'",
+                category: "Usage",
+                defaultSeverity: DiagnosticSeverity.Error,
+                isEnabledByDefault: true,
+                description: "The generic type parameter does not match the method's return type.",
+                helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000043.md"
+            );
 
-        private static readonly DiagnosticDescriptor VoidMethodWithGenericRule = new DiagnosticDescriptor(
-            id: "RUST000044",
-            title: "Void method with generic parameter",
-            messageFormat: "Method '{0}' returns void and cannot be used with generic parameter",
-            category: "Usage",
-            defaultSeverity: DiagnosticSeverity.Error,
-            isEnabledByDefault: true,
-            description: "Void methods cannot be used with generic type parameters.",
-            helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000044.md");
+        private static readonly DiagnosticDescriptor VoidMethodWithGenericRule =
+            new DiagnosticDescriptor(
+                id: "RUST000044",
+                title: "Void method with generic parameter",
+                messageFormat: "Method '{0}' returns void and cannot be used with generic parameter",
+                category: "Usage",
+                defaultSeverity: DiagnosticSeverity.Error,
+                isEnabledByDefault: true,
+                description: "Void methods cannot be used with generic type parameters.",
+                helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000044.md"
+            );
 
         private static readonly DiagnosticDescriptor DebugRule = new DiagnosticDescriptor(
             id: "RUST000042",
@@ -59,28 +66,39 @@ namespace RustAnalyzer
             category: "Debug",
             defaultSeverity: DiagnosticSeverity.Info,
             isEnabledByDefault: true,
-            description: "Debug information from analyzer.");
+            description: "Debug information from analyzer."
+        );
 
         private SyntaxNodeAnalysisContext? _currentContext;
 
-        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics 
-            => ImmutableArray.Create(InvalidMethodRule, InvalidParametersRule, InvalidGenericTypeRule, VoidMethodWithGenericRule, DebugRule);
+        public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
+            ImmutableArray.Create(
+                InvalidMethodRule,
+                InvalidParametersRule,
+                InvalidGenericTypeRule,
+                VoidMethodWithGenericRule,
+                DebugRule
+            );
 
         public override void Initialize(AnalysisContext context)
         {
-            if (context == null) throw new ArgumentNullException(nameof(context));
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
 
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            context.RegisterSyntaxNodeAction(AnalyzeInvocationExpression, SyntaxKind.InvocationExpression);
+            context.RegisterSyntaxNodeAction(
+                AnalyzeInvocationExpression,
+                SyntaxKind.InvocationExpression
+            );
         }
 
         private void AnalyzeInvocationExpression(SyntaxNodeAnalysisContext context)
         {
             _currentContext = context;
             var invocation = (InvocationExpressionSyntax)context.Node;
-            
+
             // Проверяем, что это вызов метода Call
             if (!IsCallMethod(invocation, out var pluginExpression))
             {
@@ -98,7 +116,7 @@ namespace RustAnalyzer
             // Проверяем, что поле имеет атрибут PluginReference
             var symbolInfo = context.SemanticModel.GetSymbolInfo(pluginExpression);
             var symbol = symbolInfo.Symbol;
-            
+
             if (symbol == null)
             {
                 ReportDebug(invocation, $"Symbol is null for {pluginName}");
@@ -120,8 +138,10 @@ namespace RustAnalyzer
             }
 
             var firstArg = arguments[0];
-            if (!(firstArg.Expression is LiteralExpressionSyntax literal) ||
-                literal.Kind() != SyntaxKind.StringLiteralExpression)
+            if (
+                !(firstArg.Expression is LiteralExpressionSyntax literal)
+                || literal.Kind() != SyntaxKind.StringLiteralExpression
+            )
             {
                 ReportDebug(invocation, "First argument is not a string literal");
                 return;
@@ -147,42 +167,56 @@ namespace RustAnalyzer
                     return;
                 }
 
-                var availableMethods = string.Join(", ", 
-                    config.Methods.Keys.OrderBy(m => m));
+                var availableMethods = string.Join(", ", config.Methods.Keys.OrderBy(m => m));
 
-                var diagnostic = Diagnostic.Create(InvalidMethodRule, 
-                    firstArg.GetLocation(), methodName, pluginName, availableMethods);
+                var diagnostic = Diagnostic.Create(
+                    InvalidMethodRule,
+                    firstArg.GetLocation(),
+                    methodName,
+                    pluginName,
+                    availableMethods
+                );
                 context.ReportDiagnostic(diagnostic);
                 return;
             }
 
             // Проверяем generic тип
             var genericType = GetGenericType(invocation);
-            
+
             if (genericType != null)
             {
                 var returnType = method.ReturnType;
 
                 if (returnType.Equals("void", StringComparison.OrdinalIgnoreCase))
                 {
-                    var diagnostic = Diagnostic.Create(VoidMethodWithGenericRule,
-                        invocation.GetLocation(), methodName);
+                    var diagnostic = Diagnostic.Create(
+                        VoidMethodWithGenericRule,
+                        invocation.GetLocation(),
+                        methodName
+                    );
                     context.ReportDiagnostic(diagnostic);
                     return;
                 }
 
                 if (!returnType.Equals(genericType.ToString(), StringComparison.OrdinalIgnoreCase))
                 {
-                    var diagnostic = Diagnostic.Create(InvalidGenericTypeRule,
-                        invocation.GetLocation(), methodName, returnType, genericType);
+                    var diagnostic = Diagnostic.Create(
+                        InvalidGenericTypeRule,
+                        invocation.GetLocation(),
+                        methodName,
+                        returnType,
+                        genericType
+                    );
                     context.ReportDiagnostic(diagnostic);
                     return;
                 }
             }
 
             // Проверяем параметры метода
-            var expectedParams = method.Parameters
-                .Select(p => $"{p.Type} {p.Name}" + (p.IsOptional ? $" = {p.DefaultValue}" : ""))
+            var expectedParams = method
+                .Parameters.Select(p =>
+                    $"{p.Type} {p.Name}" + (p.IsOptional ? $" = {p.DefaultValue}" : "")
+                )
                 .ToList();
 
             if (arguments.Count > 1)
@@ -190,12 +224,19 @@ namespace RustAnalyzer
                 var actualParamCount = arguments.Count - 1; // Вычитаем имя метода
                 var requiredParamCount = method.Parameters.Count(p => !p.IsOptional);
 
-                if (actualParamCount < requiredParamCount || 
-                    actualParamCount > method.Parameters.Count)
+                if (
+                    actualParamCount < requiredParamCount
+                    || actualParamCount > method.Parameters.Count
+                )
                 {
                     var expectedParamsStr = string.Join(", ", expectedParams);
-                    var diagnostic = Diagnostic.Create(InvalidParametersRule,
-                        invocation.ArgumentList.GetLocation(), methodName, pluginName, expectedParamsStr);
+                    var diagnostic = Diagnostic.Create(
+                        InvalidParametersRule,
+                        invocation.ArgumentList.GetLocation(),
+                        methodName,
+                        pluginName,
+                        expectedParamsStr
+                    );
                     context.ReportDiagnostic(diagnostic);
                 }
             }
@@ -203,20 +244,29 @@ namespace RustAnalyzer
             {
                 // Если метод требует параметры, но они не предоставлены
                 var expectedParamsStr = string.Join(", ", expectedParams);
-                var diagnostic = Diagnostic.Create(InvalidParametersRule,
-                    invocation.ArgumentList.GetLocation(), methodName, pluginName, expectedParamsStr);
+                var diagnostic = Diagnostic.Create(
+                    InvalidParametersRule,
+                    invocation.ArgumentList.GetLocation(),
+                    methodName,
+                    pluginName,
+                    expectedParamsStr
+                );
                 context.ReportDiagnostic(diagnostic);
             }
         }
 
         private void ReportDebug(SyntaxNode node, string message)
         {
-            if (_currentContext == null) return;
+            if (_currentContext == null)
+                return;
             var diagnostic = Diagnostic.Create(DebugRule, node.GetLocation(), message);
             _currentContext.Value.ReportDiagnostic(diagnostic);
         }
 
-        private bool IsCallMethod(InvocationExpressionSyntax invocation, out ExpressionSyntax pluginExpression)
+        private bool IsCallMethod(
+            InvocationExpressionSyntax invocation,
+            out ExpressionSyntax pluginExpression
+        )
         {
             pluginExpression = null;
 
@@ -277,8 +327,13 @@ namespace RustAnalyzer
                     var attrName = attr.AttributeClass?.Name;
                     if (attrName != null)
                     {
-                        ReportDebug(symbol.Locations.First().SourceTree.GetRoot().FindNode(symbol.Locations.First().SourceSpan),
-                            $"Found attribute: {attrName}");
+                        ReportDebug(
+                            symbol
+                                .Locations.First()
+                                .SourceTree.GetRoot()
+                                .FindNode(symbol.Locations.First().SourceSpan),
+                            $"Found attribute: {attrName}"
+                        );
                     }
                     if (attrName == "PluginReference" || attrName == "PluginReferenceAttribute")
                         return true;
@@ -289,7 +344,6 @@ namespace RustAnalyzer
 
         private TypeSyntax GetGenericType(InvocationExpressionSyntax invocation)
         {
-
             // Проверяем прямой вызов метода (plugin.Call<T>())
             if (invocation.Expression is MemberAccessExpressionSyntax memberAccess)
             {
@@ -313,4 +367,4 @@ namespace RustAnalyzer
             return null;
         }
     }
-} 
+}

@@ -1,12 +1,12 @@
+using System;
+using System.Collections.Generic;
+using System.Collections.Immutable;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.Utils;
-using System;
-using System.Collections.Generic;
-using System.Collections.Immutable;
-using System.Linq;
 
 namespace RustAnalyzer
 {
@@ -24,15 +24,17 @@ namespace RustAnalyzer
 
         private static readonly LocalizableString Title = "Member not found";
         private static readonly string MessageFormatTemplate =
-            "error[E0599]: no {0} named `{1}` found for type `{2}` in the current scope\n" +
-            "  --> {4}:{5}:{6}\n" +
-            "   |\n" +
-            "{5,2} | {7}\n" + // Source line
-            "   | {8} {0} not found in `{2}`\n" + // Pointer and explanation
-            "   |\n" +
-            "   = note: the type `{2}` does not have a {0} named `{1}`\n" +
-            "   = help: did you mean one of these?\n" +
-            "{3}";
+            "error[E0599]: no {0} named `{1}` found for type `{2}` in the current scope\n"
+            + "  --> {4}:{5}:{6}\n"
+            + "   |\n"
+            + "{5,2} | {7}\n"
+            + // Source line
+            "   | {8} {0} not found in `{2}`\n"
+            + // Pointer and explanation
+            "   |\n"
+            + "   = note: the type `{2}` does not have a {0} named `{1}`\n"
+            + "   = help: did you mean one of these?\n"
+            + "{3}";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -41,19 +43,24 @@ namespace RustAnalyzer
             Category,
             DiagnosticSeverity.Error,
             helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST006.md",
-            isEnabledByDefault: true);
+            isEnabledByDefault: true
+        );
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);
 
         public override void Initialize(AnalysisContext context)
         {
-            if (context == null) return;
+            if (context == null)
+                return;
 
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            context.RegisterSyntaxNodeAction(AnalyzeMemberAccess, SyntaxKind.SimpleMemberAccessExpression);
+            context.RegisterSyntaxNodeAction(
+                AnalyzeMemberAccess,
+                SyntaxKind.SimpleMemberAccessExpression
+            );
         }
 
         private void AnalyzeMemberAccess(SyntaxNodeAnalysisContext context)
@@ -73,7 +80,8 @@ namespace RustAnalyzer
                 return;
 
             // Retrieve all members of the type, excluding compiler-generated and inaccessible members
-            var members = typeSymbol.GetMembers()
+            var members = typeSymbol
+                .GetMembers()
                 .Where(m => !IsCompilerGenerated(m) && IsAccessibleMember(m))
                 .ToList();
 
@@ -90,7 +98,8 @@ namespace RustAnalyzer
             var startLinePosition = lineSpan.StartLinePosition;
 
             var sourceText = nameLocation.SourceTree?.GetText();
-            if (sourceText == null) return;
+            if (sourceText == null)
+                return;
 
             var lineText = sourceText.Lines[startLinePosition.Line].ToString();
 
@@ -102,23 +111,30 @@ namespace RustAnalyzer
 
             // Compute the "visual" column, accounting for tabs
             int visualColumn = TextAlignmentUtils.ComputeVisualColumn(lineText, charColumn, 4);
-            string pointerLine = TextAlignmentUtils.CreatePointerLine(lineText, charColumn, memberName.Length, 4);
+            string pointerLine = TextAlignmentUtils.CreatePointerLine(
+                lineText,
+                charColumn,
+                memberName.Length,
+                4
+            );
 
             // Retrieve the file name
-            var fileName = System.IO.Path.GetFileName(nameLocation.SourceTree?.FilePath ?? string.Empty);
+            var fileName = System.IO.Path.GetFileName(
+                nameLocation.SourceTree?.FilePath ?? string.Empty
+            );
 
             // Create the filled message format for description
             var dynamicDescription = string.Format(
                 MessageFormatTemplate,
                 DetermineMemberKind(memberAccess, semanticModel), // {0}
-                memberName,                                       // {1}
-                typeSymbol.ToDisplayString(),                    // {2}
-                suggestions,                                     // {3}
-                fileName,                                        // {4}
-                startLinePosition.Line + 1,                      // {5}
-                charColumn + 1,                                  // {6}
-                lineText,                                        // {7}
-                pointerLine                                      // {8}
+                memberName, // {1}
+                typeSymbol.ToDisplayString(), // {2}
+                suggestions, // {3}
+                fileName, // {4}
+                startLinePosition.Line + 1, // {5}
+                charColumn + 1, // {6}
+                lineText, // {7}
+                pointerLine // {8}
             );
 
             // Create the diagnostic
@@ -127,20 +143,23 @@ namespace RustAnalyzer
                 nameLocation,
                 dynamicDescription,
                 DetermineMemberKind(memberAccess, semanticModel), // {0}
-                memberName,                                       // {1}
-                typeSymbol.ToDisplayString(),                    // {2}
-                suggestions,                                     // {3}
-                fileName,                                        // {4}
-                startLinePosition.Line + 1,                      // {5}
-                charColumn + 1,                                  // {6}
-                lineText,                                        // {7}
-                pointerLine                                      // {8}
+                memberName, // {1}
+                typeSymbol.ToDisplayString(), // {2}
+                suggestions, // {3}
+                fileName, // {4}
+                startLinePosition.Line + 1, // {5}
+                charColumn + 1, // {6}
+                lineText, // {7}
+                pointerLine // {8}
             );
 
             context.ReportDiagnostic(diagnostic);
         }
 
-        private string DetermineMemberKind(MemberAccessExpressionSyntax memberAccess, SemanticModel semanticModel)
+        private string DetermineMemberKind(
+            MemberAccessExpressionSyntax memberAccess,
+            SemanticModel semanticModel
+        )
         {
             if (memberAccess.Parent is InvocationExpressionSyntax)
                 return "method";
@@ -158,12 +177,12 @@ namespace RustAnalyzer
 
         private string FindSimilarMembers(string targetName, List<ISymbol> members)
         {
-            var candidates = members.Select(m => (text: m.Name, context: FormatMemberSuggestion(m)));
-            
-            var similarMembers = StringSimilarity.FindSimilarWithContext(
-                targetName,
-                candidates,
-                maxSuggestions: 5)
+            var candidates = members.Select(m =>
+                (text: m.Name, context: FormatMemberSuggestion(m))
+            );
+
+            var similarMembers = StringSimilarity
+                .FindSimilarWithContext(targetName, candidates, maxSuggestions: 5)
                 .Select(r => r.Context) // Используем Context, так как там уже отформатированное предложение
                 .ToList();
 
@@ -176,7 +195,10 @@ namespace RustAnalyzer
             if (symbol is IMethodSymbol methodSymbol)
             {
                 string returnType = methodSymbol.ReturnType.ToDisplayString();
-                string parameters = string.Join(", ", methodSymbol.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"));
+                string parameters = string.Join(
+                    ", ",
+                    methodSymbol.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}")
+                );
                 return $"           - `{returnType} {methodSymbol.Name}({parameters})`";
             }
 

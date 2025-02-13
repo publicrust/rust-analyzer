@@ -10,7 +10,12 @@ namespace RustAnalyzer.src.Models.StringPool
         public List<int> ParameterIndices { get; }
         public PrefabNameCheckType CheckType { get; }
 
-        public MethodConfig(string typeName, string methodName, List<int> parameterIndices, PrefabNameCheckType checkType = PrefabNameCheckType.FullPath)
+        public MethodConfig(
+            string typeName,
+            string methodName,
+            List<int> parameterIndices,
+            PrefabNameCheckType checkType = PrefabNameCheckType.FullPath
+        )
         {
             TypeName = typeName;
             MethodName = methodName;
@@ -18,4 +23,4 @@ namespace RustAnalyzer.src.Models.StringPool
             CheckType = checkType;
         }
     }
-} 
+}

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Text.Json;
 using System.Linq;
+using System.Text.Json;
 using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.Models
@@ -68,7 +68,10 @@ namespace RustAnalyzer.Models
             Tuple.Create("NoEscape", "StartCombatBlocking(BasePlayer)"),
             Tuple.Create("NoEscape", "StopCombatBlocking(string)"),
             Tuple.Create("XDQuest", "OnQuestCompleted(BasePlayer,string)"),
-            Tuple.Create("XDQuest", "OnQuestProgress(ulong,QuestType,string,string,List<Item>,int)"),
+            Tuple.Create(
+                "XDQuest",
+                "OnQuestProgress(ulong,QuestType,string,string,List<Item>,int)"
+            ),
             Tuple.Create("TimedPermissions", "OnTimedPermissionGranted(string,string,TimeSpan)"),
             Tuple.Create("TimedPermissions", "OnTimedPermissionExtended(string,string,TimeSpan)"),
             Tuple.Create("TimedPermissions", "OnTimedGroupAdded(string,string,TimeSpan)"),
@@ -111,28 +114,31 @@ namespace RustAnalyzer.Models
         {
             try
             {
-                return Hooks.Select(h =>
-                {
-                    var hookModel = HooksUtils.ParseHookString(h.Item2);
-                    if (hookModel == null)
-                        return null;
-
-                    return new PluginHookModel
+                return Hooks
+                    .Select(h =>
                     {
-                        PluginName = h.Item1,
-                        HookName = hookModel.HookName,
-                        HookParameters = hookModel.HookParameters
-                    };
-                })
-                .Where(h => h != null)
-                .Select(h => h!)
-                .ToList();
+                        var hookModel = HooksUtils.ParseHookString(h.Item2);
+                        if (hookModel == null)
+                            return null;
+
+                        return new PluginHookModel
+                        {
+                            PluginName = h.Item1,
+                            HookName = hookModel.HookName,
+                            HookParameters = hookModel.HookParameters,
+                        };
+                    })
+                    .Where(h => h != null)
+                    .Select(h => h!)
+                    .ToList();
             }
-            catch(Exception ex)
+            catch (Exception ex)
             {
-                Console.WriteLine($"[RustAnalyzer] Failed to load plugin hooks PluginHooksJson {ex.Message}");
+                Console.WriteLine(
+                    $"[RustAnalyzer] Failed to load plugin hooks PluginHooksJson {ex.Message}"
+                );
                 return new List<PluginHookModel>();
             }
         }
     }
-} 
+}

@@ -1,8 +1,8 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using System.Collections.Generic;
 using RustAnalyzer.Models;
 using RustAnalyzer.Utils;
 
@@ -39,12 +39,16 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsUnityClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsUnityClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
-            if (methodSignature == null) return false;
+            if (methodSignature == null)
+                return false;
 
             // ��������� ������� ���� � ����� ������
             return _hooks.Any(s => s.HookName == methodSignature.HookName);
@@ -56,8 +60,11 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsKnownHook(IMethodSymbol method)
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsUnityClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsUnityClass(method.ContainingType)
+            )
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
@@ -70,14 +77,21 @@ namespace RustAnalyzer
         /// <summary>
         /// Returns hooks with similar names to the method.
         /// </summary>
-        public static IEnumerable<HookModel> GetSimilarHooks(IMethodSymbol method, int maxSuggestions = 3)
+        public static IEnumerable<HookModel> GetSimilarHooks(
+            IMethodSymbol method,
+            int maxSuggestions = 3
+        )
         {
-            if (method == null || method.ContainingType == null ||
-                !HooksUtils.IsUnityClass(method.ContainingType))
+            if (
+                method == null
+                || method.ContainingType == null
+                || !HooksUtils.IsUnityClass(method.ContainingType)
+            )
                 return Enumerable.Empty<HookModel>();
 
             var candidates = _hooks.Select(h => (text: h.HookName, context: h));
-            return StringSimilarity.FindSimilarWithContext(method.Name, candidates, maxSuggestions)
+            return StringSimilarity
+                .FindSimilarWithContext(method.Name, candidates, maxSuggestions)
                 .Select(r => r.Context);
         }
     }
