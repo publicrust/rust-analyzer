@@ -47,7 +47,7 @@ namespace RustAnalyzer.Analyzers
             Title,
             MessageFormat,
             Category,
-            DiagnosticSeverity.Warning,
+            DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: Description,
             helpLinkUri: "https://github.com/legov/rust-analyzer/blob/main/docs/RUST003.md"
@@ -380,7 +380,7 @@ namespace RustAnalyzer.Analyzers
                 Title,
                 messageFormat,
                 Category,
-                DiagnosticSeverity.Warning,
+                DiagnosticSeverity.Error,
                 isEnabledByDefault: true,
                 description: Description,
                 helpLinkUri: "https://github.com/legov/rust-analyzer/blob/main/docs/RUST003.md"

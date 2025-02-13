@@ -16,7 +16,7 @@ namespace RustAnalyzer
             title: "Unused field detected",
             messageFormat: "Field '{0}' is declared but never used",
             category: "Performance",
-            defaultSeverity: DiagnosticSeverity.Warning,
+            defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: "Fields that are never used should be removed to improve code clarity.",
             helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000030.md"

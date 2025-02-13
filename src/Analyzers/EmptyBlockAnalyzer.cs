@@ -16,7 +16,7 @@ namespace RustAnalyzer
             title: "Empty code block detected",
             messageFormat: "Empty code block found in {0}",
             category: "Style",
-            defaultSeverity: DiagnosticSeverity.Warning,
+            defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: "Code blocks should contain implementation. Empty blocks might indicate incomplete code.",
             helpLinkUri: "https://github.com/publicrust/rust-analyzer/blob/main/docs/RUST000050.md"
