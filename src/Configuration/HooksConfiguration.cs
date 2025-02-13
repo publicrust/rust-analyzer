@@ -95,6 +95,7 @@ namespace RustAnalyzer
                 method == null
                 || method.ContainingType == null
                 || !HooksUtils.IsRustClass(method.ContainingType)
+                || method.IsStatic
             )
                 return false;
 
