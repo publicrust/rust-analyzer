@@ -57,7 +57,7 @@ namespace RustAnalyzer
             // Check if it's a known hook
             if (HooksConfiguration.IsKnownHook(methodSymbol))
             {
-                if (!HooksConfiguration.IsHook(methodSymbol))
+                if (!HooksConfiguration.IsHook(methodSymbol) && !methodSymbol.IsStatic)
                 {
                     // Get the expected hook signature
                     var expectedSignature = HooksConfiguration
