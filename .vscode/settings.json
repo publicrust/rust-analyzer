@@ -1,0 +1,14 @@
+{
+    "[csharp]": {
+        "editor.defaultFormatter": "csharpier.csharpier-vscode",
+        "editor.formatOnSave": true
+    },
+    "emeraldwalk.runonsave": {
+    "commands": [
+            {
+                "match": ".*\\.cs$",
+                "cmd": "dotnet format"
+            }
+        ]
+    }
+}

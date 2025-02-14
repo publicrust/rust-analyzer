@@ -27,7 +27,7 @@ namespace RustAnalyzer
             Title,
             MessageFormat,
             Category,
-            DiagnosticSeverity.Warning,
+            DiagnosticSeverity.Error,
             isEnabledByDefault: true,
             description: Description,
             helpLinkUri: $"https://github.com/rust-analyzer/docs/{DiagnosticId}.md"
