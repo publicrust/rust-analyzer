@@ -108,7 +108,7 @@ namespace RustAnalyzer.Analyzers
 
         private bool IsHookMethod(IMethodSymbol methodSymbol)
         {
-            return HookConfiguration.IsHookMethod(methodSymbol.Name);
+            return HooksConfiguration.IsKnownHook(methodSymbol);
         }
     }
 }
