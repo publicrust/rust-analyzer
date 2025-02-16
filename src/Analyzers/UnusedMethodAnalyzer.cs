@@ -20,32 +20,42 @@ namespace RustAnalyzer.Analyzers
         private const string Category = "Design";
 
         private static readonly LocalizableString Title = "Unused method detected";
-        private static readonly LocalizableString Description =
-            "Methods should be used or removed to maintain clean code.";
 
-        private static readonly LocalizableString MessageFormat = "Method '{0}' is never used";
-        private static readonly LocalizableString MessageFormatWithHooks =
-            "Method '{0}' is never used.\n"
-            + "If you intended this to be a hook, no matching hook was found.\n"
-            + "Similar hooks that might match: {1}";
-        private static readonly LocalizableString MessageFormatCommand =
-            "Method '{0}' is never used.\n"
-            + "If you intended this to be a command, here are the common command signatures:\n"
-            + "[Command(\"name\")]\n"
+        private static readonly string NoteTemplate = "Method '{0}' is never used";
+
+        private static readonly string HelpTemplate =
+            "Remove the method or mark it with appropriate attribute if it's intended to be used";
+
+        private static readonly string ExampleTemplate = "// Example of proper method usage";
+
+        private static readonly string HookNoteTemplate =
+            "Method '{0}' is never used. If you intended this to be a hook, no matching hook was found";
+
+        private static readonly string HookHelpTemplate = "Similar hooks that might match: {0}";
+
+        private static readonly string CommandNoteTemplate =
+            "Method '{0}' is never used. If you intended this to be a command, here are the common command signatures";
+
+        private static readonly string CommandHelpTemplate =
+            "[Command(\"name\")]\n"
             + "void CommandName(IPlayer player, string command, string[] args)\n\n"
             + "[ChatCommand(\"name\")]\n"
             + "void CommandName(BasePlayer player, string command, string[] args)\n\n"
             + "[ConsoleCommand(\"name\")]\n"
             + "void CommandName(ConsoleSystem.Arg args)";
 
-        private static readonly LocalizableString MessageFormatAPI =
-            "Method '{0}' is never used.\n"
-            + "If you want to expose this method as an API for other plugins, mark it with [HookMethod] attribute.";
+        private static readonly string ApiNoteTemplate = "Method '{0}' is never used";
+
+        private static readonly string ApiHelpTemplate =
+            "If you want to expose this method as an API for other plugins, mark it with [HookMethod] attribute";
+
+        private static readonly LocalizableString Description =
+            "Methods should be used or removed to maintain clean code.";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
             Title,
-            MessageFormat,
+            "{0}", // Placeholder for dynamic description
             Category,
             DiagnosticSeverity.Error,
             isEnabledByDefault: true,
@@ -53,7 +63,6 @@ namespace RustAnalyzer.Analyzers
             helpLinkUri: "https://github.com/legov/rust-analyzer/blob/main/docs/RUST003.md"
         );
 
-        // Для сравнения символов методов
         private static readonly SymbolEqualityComparer SymbolComparer =
             SymbolEqualityComparer.Default;
 
@@ -62,6 +71,9 @@ namespace RustAnalyzer.Analyzers
 
         public override void Initialize(AnalysisContext context)
         {
+            if (context == null)
+                throw new ArgumentNullException(nameof(context));
+
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
             context.RegisterSyntaxNodeAction(
@@ -84,15 +96,12 @@ namespace RustAnalyzer.Analyzers
             )
                 return;
 
-            // Пропускаем методы, которые не нужно анализировать
             if (ShouldSkip(methodSymbol))
                 return;
 
-            // Проверяем, используется ли метод
             if (IsMethodUsed(methodSymbol, context))
                 return;
 
-            // Проверяем хуки
             if (HooksConfiguration.IsKnownHook(methodSymbol))
                 return;
 
@@ -105,21 +114,43 @@ namespace RustAnalyzer.Analyzers
             if (DeprecatedHooksConfiguration.IsHook(methodSymbol))
                 return;
 
-            // Если метод в регионе API, выдаем специальное сообщение
+            var location = methodDeclaration.Identifier.GetLocation();
+            var sourceText = location.SourceTree?.GetText();
+            if (sourceText == null)
+                return;
+
+            var formatInfo = new RustDiagnosticFormatter.DiagnosticFormatInfo
+            {
+                ErrorCode = DiagnosticId,
+                ErrorTitle = Title.ToString(),
+                Location = location,
+                SourceText = sourceText,
+                MessageParameters = new[] { methodSymbol.Name },
+                Note = NoteTemplate,
+                Help = HelpTemplate,
+                Example = ExampleTemplate,
+            };
+
             if (IsInAPIRegion(methodDeclaration))
             {
-                ReportDiagnostic(context, methodSymbol, MessageFormatAPI, methodSymbol.Name);
+                formatInfo.Note = ApiNoteTemplate;
+                formatInfo.Help = ApiHelpTemplate;
+                var dynamicDescription = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+                var diagnostic = Diagnostic.Create(Rule, location, dynamicDescription);
+                context.ReportDiagnostic(diagnostic);
                 return;
             }
 
-            // Если метод называется "command" и не используется через AddConsoleCommand
             if (CommandUtils.IsCommand(methodSymbol))
             {
-                ReportDiagnostic(context, methodSymbol, MessageFormatCommand, methodSymbol.Name);
+                formatInfo.Note = CommandNoteTemplate;
+                formatInfo.Help = CommandHelpTemplate;
+                var dynamicDescription = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+                var diagnostic = Diagnostic.Create(Rule, location, dynamicDescription);
+                context.ReportDiagnostic(diagnostic);
                 return;
             }
 
-            // Получаем похожие хуки из всех источников
             var similarHooks = HooksConfiguration
                 .GetSimilarHooks(methodSymbol)
                 .Select(h => h.ToString());
@@ -136,20 +167,14 @@ namespace RustAnalyzer.Analyzers
 
             if (allSimilarHooks.Any())
             {
-                var suggestionsText = string.Join(", ", allSimilarHooks);
+                var suggestionsText = string.Join("\n           ", allSimilarHooks);
+                formatInfo.Note = HookNoteTemplate;
+                formatInfo.Help = string.Format(HookHelpTemplate, suggestionsText);
+            }
 
-                ReportDiagnostic(
-                    context,
-                    methodSymbol,
-                    MessageFormatWithHooks,
-                    methodSymbol.Name,
-                    suggestionsText
-                );
-            }
-            else
-            {
-                ReportDiagnostic(context, methodSymbol, MessageFormat, methodSymbol.Name);
-            }
+            var dynamicDesc = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+            var diag = Diagnostic.Create(Rule, location, dynamicDesc);
+            context.ReportDiagnostic(diag);
         }
 
         private static IEnumerable<string> GetHookParameters(string hookName)
@@ -161,10 +186,6 @@ namespace RustAnalyzer.Analyzers
             return hook.HookParameters.Select(p => p.Type);
         }
 
-        /// <summary>
-        /// Решаем, нужно ли пропускать метод (например, это не обычный метод
-        /// или у него атрибуты, которые мы не анализируем, или он уже является хуком).
-        /// </summary>
         private static bool ShouldSkip(IMethodSymbol methodSymbol)
         {
             if (methodSymbol.MethodKind != MethodKind.Ordinary)
@@ -178,7 +199,6 @@ namespace RustAnalyzer.Analyzers
                 "HookMethod",
             };
 
-            // Пропускаем методы с определёнными атрибутами
             if (
                 methodSymbol
                     .GetAttributes()
@@ -196,7 +216,6 @@ namespace RustAnalyzer.Analyzers
                 return true;
             }
 
-            // Пропускаем методы, которые уже считаются хуками
             if (
                 UnityHooksConfiguration.IsHook(methodSymbol)
                 || HooksConfiguration.IsHook(methodSymbol)
@@ -209,35 +228,27 @@ namespace RustAnalyzer.Analyzers
             return false;
         }
 
-        /// <summary>
-        /// Проверяем, используется ли метод в коде (прямые вызовы, generic-вызовы, делегаты, идентификаторы).
-        /// </summary>
         private static bool IsMethodUsed(IMethodSymbol method, SyntaxNodeAnalysisContext context)
         {
-            // Пропускаем override-методы, т.к. они по определению "используются"
             if (method.IsOverride)
                 return true;
 
-            // Пропускаем методы расширения, так как они могут использоваться в других местах
             if (method.IsExtensionMethod)
                 return true;
 
             var compilation = context.Compilation;
 
-            // Проходим по всем SyntaxTree в компиляции
             foreach (var tree in compilation.SyntaxTrees)
             {
                 var semanticModel = compilation.GetSemanticModel(tree);
                 var root = tree.GetRoot(context.CancellationToken);
 
-                // Проверяем регистрацию через все варианты команд
                 var invocations = root.DescendantNodes().OfType<InvocationExpressionSyntax>();
                 foreach (var invocation in invocations)
                 {
                     var info = semanticModel.GetSymbolInfo(invocation);
                     if (info.Symbol is IMethodSymbol calledMethod)
                     {
-                        // Проверяем прямые вызовы AddConsoleCommand/AddChatCommand
                         if (
                             calledMethod.Name == "AddConsoleCommand"
                             || calledMethod.Name == "AddChatCommand"
@@ -246,10 +257,8 @@ namespace RustAnalyzer.Analyzers
                             var args = invocation.ArgumentList.Arguments;
                             if (args.Count >= 3)
                             {
-                                // Проверяем третий аргумент (может быть nameof или делегат)
                                 var methodNameArg = args[2].Expression;
 
-                                // Проверяем случай с nameof
                                 var constValue = semanticModel.GetConstantValue(methodNameArg);
                                 if (
                                     constValue.HasValue
@@ -260,7 +269,6 @@ namespace RustAnalyzer.Analyzers
                                     return true;
                                 }
 
-                                // Проверяем случай с делегатом
                                 if (methodNameArg is SimpleLambdaExpressionSyntax lambda)
                                 {
                                     var lambdaSymbol = semanticModel.GetSymbolInfo(lambda).Symbol;
@@ -276,7 +284,6 @@ namespace RustAnalyzer.Analyzers
                                     }
                                 }
 
-                                // Проверяем случай с прямой передачей метода
                                 var argSymbol = semanticModel.GetSymbolInfo(methodNameArg).Symbol;
                                 if (
                                     argSymbol != null
@@ -288,7 +295,6 @@ namespace RustAnalyzer.Analyzers
                             }
                         }
 
-                        // Проверяем прямые вызовы метода
                         if (
                             SymbolComparer.Equals(calledMethod, method)
                             || SymbolComparer.Equals(calledMethod.OriginalDefinition, method)
@@ -299,7 +305,6 @@ namespace RustAnalyzer.Analyzers
                     }
                 }
 
-                // Проверяем использование через memberAccess, делегаты, события
                 var memberAccesses = root.DescendantNodes().OfType<MemberAccessExpressionSyntax>();
                 foreach (var memberAccess in memberAccesses)
                 {
@@ -308,7 +313,6 @@ namespace RustAnalyzer.Analyzers
                         return true;
                 }
 
-                // Проверяем использование как идентификатор
                 var identifiers = root.DescendantNodes().OfType<IdentifierNameSyntax>();
                 foreach (var identifier in identifiers)
                 {
@@ -323,11 +327,9 @@ namespace RustAnalyzer.Analyzers
 
         private static bool IsInAPIRegion(MethodDeclarationSyntax methodDeclaration)
         {
-            // Получаем все триви до конца файла, чтобы найти все регионы
             var syntaxTree = methodDeclaration.SyntaxTree;
             var position = methodDeclaration.SpanStart;
 
-            // Получаем все триви в файле
             var root = syntaxTree.GetRoot();
             var triviaList = root.DescendantTrivia()
                 .Where(t =>
@@ -346,7 +348,6 @@ namespace RustAnalyzer.Analyzers
                 if (trivia.IsKind(SyntaxKind.RegionDirectiveTrivia))
                 {
                     var regionDirective = (RegionDirectiveTriviaSyntax)trivia.GetStructure();
-                    // Получаем текст после #region
                     var regionText = regionDirective
                         .EndOfDirectiveToken.LeadingTrivia.ToString()
                         .Trim()
@@ -361,33 +362,7 @@ namespace RustAnalyzer.Analyzers
                 }
             }
 
-            // Проверяем, находимся ли мы в API регионе
             return regionStack.Count > 0 && regionStack.Peek() == "API";
-        }
-
-        /// <summary>
-        /// Локальный помощник для репорта диагностики с нужным форматным сообщением.
-        /// </summary>
-        private static void ReportDiagnostic(
-            SyntaxNodeAnalysisContext context,
-            IMethodSymbol methodSymbol,
-            LocalizableString messageFormat,
-            params object[] messageArgs
-        )
-        {
-            var descriptor = new DiagnosticDescriptor(
-                DiagnosticId,
-                Title,
-                messageFormat,
-                Category,
-                DiagnosticSeverity.Error,
-                isEnabledByDefault: true,
-                description: Description,
-                helpLinkUri: "https://github.com/legov/rust-analyzer/blob/main/docs/RUST003.md"
-            );
-
-            var diagnostic = Diagnostic.Create(descriptor, methodSymbol.Locations[0], messageArgs);
-            context.ReportDiagnostic(diagnostic);
         }
     }
 }

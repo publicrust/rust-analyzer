@@ -11,7 +11,7 @@ using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.src.Configuration
 {
-    internal static class DeprecatedHooksConfiguration
+    public static class DeprecatedHooksConfiguration
     {
         private static IDeprecatedHooksProvider _provider = null!;
         private static List<DeprecatedHookModel> _hooks = new();
