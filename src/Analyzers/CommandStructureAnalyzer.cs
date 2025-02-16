@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using RustAnalyzer.Configuration;
 using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.Analyzers
@@ -30,38 +31,6 @@ namespace RustAnalyzer.Analyzers
             isEnabledByDefault: true,
             description: Description
         );
-
-        private static readonly Dictionary<string, CommandStructure> CommandStructures =
-            new Dictionary<string, CommandStructure>
-            {
-                {
-                    "ChatCommand",
-                    new CommandStructure(
-                        "ChatCommand",
-                        new[] { "BasePlayer", "string", "string[]" },
-                        new[] { "player", "command", "args" },
-                        "[ChatCommand(\"name\")]\nvoid CommandName(BasePlayer player, string command, string[] args)"
-                    )
-                },
-                {
-                    "Command",
-                    new CommandStructure(
-                        "Command",
-                        new[] { "IPlayer", "string", "string[]" },
-                        new[] { "player", "command", "args" },
-                        "[Command(\"name\")]\nvoid CommandName(IPlayer player, string command, string[] args)"
-                    )
-                },
-                {
-                    "ConsoleCommand",
-                    new CommandStructure(
-                        "ConsoleCommand",
-                        new[] { "ConsoleSystem.Arg" },
-                        new[] { "args" },
-                        "[ConsoleCommand(\"name\")]\nvoid CommandName(ConsoleSystem.Arg args)"
-                    )
-                },
-            };
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
             ImmutableArray.Create(Rule);
@@ -97,7 +66,7 @@ namespace RustAnalyzer.Analyzers
                         $"[RustAnalyzer] Found attribute: {attrName} ({attrFullName})"
                     );
 
-                    return CommandStructures.Keys.Any(ca =>
+                    return CommandStructureInfo.CommandStructures.Keys.Any(ca =>
                         attrName.Equals(ca, StringComparison.OrdinalIgnoreCase)
                         || attrName.Equals(ca + "Attribute", StringComparison.OrdinalIgnoreCase)
                         || attrFullName.EndsWith($".{ca}", StringComparison.OrdinalIgnoreCase)
@@ -130,7 +99,7 @@ namespace RustAnalyzer.Analyzers
                     Console.WriteLine(
                         $"[RustAnalyzer] Checking attribute: {attributeName} (structure: {structureName})"
                     );
-                    var structure = CommandStructures[structureName];
+                    var structure = CommandStructureInfo.CommandStructures[structureName];
 
                     // Проверяем, что атрибут имеет конструктор с параметром name
                     if (attribute.ConstructorArguments.Length == 0)
@@ -164,8 +133,10 @@ namespace RustAnalyzer.Analyzers
             {
                 Console.WriteLine($"[RustAnalyzer] Method looks like a command by name");
                 // Проверяем, соответствует ли метод хотя бы одной из известных структур
-                var matchingStructures = CommandStructures
-                    .Values.Where(structure => IsValidParameterStructure(methodSymbol, structure))
+                var matchingStructures = CommandStructureInfo
+                    .CommandStructures.Values.Where(structure =>
+                        IsValidParameterStructure(methodSymbol, structure)
+                    )
                     .ToList();
 
                 Console.WriteLine(
@@ -177,7 +148,10 @@ namespace RustAnalyzer.Analyzers
                     // Если метод не соответствует ни одной структуре, показываем все возможные варианты
                     var message =
                         "This method appears to be a command but has invalid parameter structure. Valid command structures are:\n\n"
-                        + string.Join("\n\n", CommandStructures.Values.Select(s => s.Example));
+                        + string.Join(
+                            "\n\n",
+                            CommandStructureInfo.CommandStructures.Values.Select(s => s.Example)
+                        );
                     ReportDiagnostic(context, methodDeclaration, message);
                 }
             }
@@ -279,27 +253,6 @@ namespace RustAnalyzer.Analyzers
         {
             var diagnostic = Diagnostic.Create(Rule, node.GetLocation(), message);
             context.ReportDiagnostic(diagnostic);
-        }
-
-        private class CommandStructure
-        {
-            public string AttributeName { get; }
-            public string[] ParameterTypes { get; }
-            public string[] ParameterNames { get; }
-            public string Example { get; }
-
-            public CommandStructure(
-                string attributeName,
-                string[] parameterTypes,
-                string[] parameterNames,
-                string example
-            )
-            {
-                AttributeName = attributeName;
-                ParameterTypes = parameterTypes;
-                ParameterNames = parameterNames;
-                Example = example;
-            }
         }
     }
 }
