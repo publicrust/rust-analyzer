@@ -23,18 +23,12 @@ namespace RustAnalyzer
         private const string Category = "Usage";
 
         private static readonly LocalizableString Title = "Member not found";
-        private static readonly string MessageFormatTemplate =
-            "error[E0599]: no {0} named `{1}` found for type `{2}` in the current scope\n"
-            + "  --> {4}:{5}:{6}\n"
-            + "   |\n"
-            + "{5,2} | {7}\n"
-            + // Source line
-            "   | {8} {0} not found in `{2}`\n"
-            + // Pointer and explanation
-            "   |\n"
-            + "   = note: the type `{2}` does not have a {0} named `{1}`\n"
-            + "   = help: did you mean one of these?\n"
-            + "{3}";
+
+        private static readonly string NoteTemplate =
+            "the type `{2}` does not have a {0} named `{1}`";
+        private static readonly string HelpTemplate = "did you mean one of these?";
+
+        private static readonly LocalizableString Description = "Member not found in type";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
@@ -88,71 +82,34 @@ namespace RustAnalyzer
             // Find similar members
             var suggestions = FindSimilarMembers(memberName, members);
 
-            // If no suggestions are found, add a fallback message
-            if (string.IsNullOrEmpty(suggestions))
-                suggestions = "           - (no similar members)";
-
-            // Get the location and line information for the name node
-            var nameLocation = memberAccess.Name.GetLocation();
-            var lineSpan = nameLocation.GetLineSpan();
-            var startLinePosition = lineSpan.StartLinePosition;
-
-            var sourceText = nameLocation.SourceTree?.GetText();
+            var memberKind = DetermineMemberKind(memberAccess, semanticModel);
+            var location = memberAccess.Name.GetLocation();
+            var sourceText = location.SourceTree?.GetText();
             if (sourceText == null)
                 return;
 
-            var lineText = sourceText.Lines[startLinePosition.Line].ToString();
+            var parameters = new[]
+            {
+                memberKind, // {0} - тип члена (метод, свойство и т.д.)
+                memberName, // {1} - имя члена
+                typeSymbol.ToDisplayString(), // {2} - тип
+            };
 
-            // Expand tabs for consistent alignment
-            lineText = TextAlignmentUtils.ExpandTabs(lineText, 4);
+            var formatInfo = new RustDiagnosticFormatter.DiagnosticFormatInfo
+            {
+                ErrorCode = "E0599",
+                ErrorTitle =
+                    $"no {memberKind} named `{memberName}` found for type `{typeSymbol.ToDisplayString()}` in the current scope",
+                Location = location,
+                SourceText = sourceText,
+                MessageParameters = parameters,
+                Note = NoteTemplate,
+                Help = HelpTemplate,
+                Example = suggestions,
+            };
 
-            // Column where the member name starts
-            int charColumn = startLinePosition.Character;
-
-            // Compute the "visual" column, accounting for tabs
-            int visualColumn = TextAlignmentUtils.ComputeVisualColumn(lineText, charColumn, 4);
-            string pointerLine = TextAlignmentUtils.CreatePointerLine(
-                lineText,
-                charColumn,
-                memberName.Length,
-                4
-            );
-
-            // Retrieve the file name
-            var fileName = System.IO.Path.GetFileName(
-                nameLocation.SourceTree?.FilePath ?? string.Empty
-            );
-
-            // Create the filled message format for description
-            var dynamicDescription = string.Format(
-                MessageFormatTemplate,
-                DetermineMemberKind(memberAccess, semanticModel), // {0}
-                memberName, // {1}
-                typeSymbol.ToDisplayString(), // {2}
-                suggestions, // {3}
-                fileName, // {4}
-                startLinePosition.Line + 1, // {5}
-                charColumn + 1, // {6}
-                lineText, // {7}
-                pointerLine // {8}
-            );
-
-            // Create the diagnostic
-            var diagnostic = Diagnostic.Create(
-                Rule,
-                nameLocation,
-                dynamicDescription,
-                DetermineMemberKind(memberAccess, semanticModel), // {0}
-                memberName, // {1}
-                typeSymbol.ToDisplayString(), // {2}
-                suggestions, // {3}
-                fileName, // {4}
-                startLinePosition.Line + 1, // {5}
-                charColumn + 1, // {6}
-                lineText, // {7}
-                pointerLine // {8}
-            );
-
+            var dynamicDescription = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+            var diagnostic = Diagnostic.Create(Rule, location, dynamicDescription);
             context.ReportDiagnostic(diagnostic);
         }
 
