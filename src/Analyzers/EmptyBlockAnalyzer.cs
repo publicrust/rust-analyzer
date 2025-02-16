@@ -5,16 +5,32 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using RustAnalyzer.Utils;
 
 namespace RustAnalyzer
 {
     [DiagnosticAnalyzer(LanguageNames.CSharp)]
     public class EmptyBlockAnalyzer : DiagnosticAnalyzer
     {
+        private static readonly LocalizableString Title = "Empty code block detected";
+
+        private static readonly string NoteTemplate = "Empty code block found in {0}";
+
+        private static readonly string HelpTemplate =
+            "Code blocks should contain implementation. Empty blocks might indicate incomplete code.";
+
+        private static readonly string ExampleTemplate =
+            "// Add implementation or remove the empty block\n"
+            + "void Example()\n"
+            + "{\n"
+            + "    // Your code here\n"
+            + "    DoSomething();\n"
+            + "}";
+
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             id: "RUST000050",
-            title: "Empty code block detected",
-            messageFormat: "Empty code block found in {0}",
+            Title,
+            "{0}", // Placeholder for dynamic description
             category: "Style",
             defaultSeverity: DiagnosticSeverity.Error,
             isEnabledByDefault: true,
@@ -48,8 +64,27 @@ namespace RustAnalyzer
 
             if (!block.Statements.Any())
             {
+                var location = block.GetLocation();
+                var sourceText = location.SourceTree?.GetText();
+                if (sourceText == null)
+                    return;
+
                 var parentContext = GetParentContext(block);
-                var diagnostic = Diagnostic.Create(Rule, block.GetLocation(), parentContext);
+
+                var formatInfo = new RustDiagnosticFormatter.DiagnosticFormatInfo
+                {
+                    ErrorCode = "RUST000050",
+                    ErrorTitle = "Empty code block detected",
+                    Location = location,
+                    SourceText = sourceText,
+                    MessageParameters = new[] { parentContext },
+                    Note = NoteTemplate,
+                    Help = HelpTemplate,
+                    Example = ExampleTemplate,
+                };
+
+                var dynamicDescription = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+                var diagnostic = Diagnostic.Create(Rule, location, dynamicDescription);
                 context.ReportDiagnostic(diagnostic);
             }
         }
@@ -82,34 +117,24 @@ namespace RustAnalyzer
             var parent = block.Parent;
             while (parent != null)
             {
-                if (parent is MethodDeclarationSyntax method)
-                    return $"method '{method.Identifier.Text}'";
-                if (parent is ConstructorDeclarationSyntax ctor)
-                    return $"constructor '{ctor.Identifier.Text}'";
-                if (parent is PropertyDeclarationSyntax prop)
-                    return $"property '{prop.Identifier.Text}'";
-                if (parent is IfStatementSyntax)
-                    return "if statement";
-                if (parent is ForStatementSyntax)
-                    return "for loop";
-                if (parent is ForEachStatementSyntax)
-                    return "foreach loop";
-                if (parent is WhileStatementSyntax)
-                    return "while loop";
-                if (parent is DoStatementSyntax)
-                    return "do-while loop";
-                if (parent is SwitchSectionSyntax)
-                    return "switch case";
-                if (parent is TryStatementSyntax)
-                    return "try block";
-                if (parent is CatchClauseSyntax)
-                    return "catch block";
-                if (parent is FinallyClauseSyntax)
-                    return "finally block";
-
+                switch (parent)
+                {
+                    case MethodDeclarationSyntax method:
+                        return $"method '{method.Identifier.Text}'";
+                    case PropertyDeclarationSyntax property:
+                        return $"property '{property.Identifier.Text}'";
+                    case AccessorDeclarationSyntax accessor:
+                        return $"property accessor '{accessor.Keyword.Text}'";
+                    case ConstructorDeclarationSyntax constructor:
+                        return "constructor";
+                    case DestructorDeclarationSyntax:
+                        return "destructor";
+                    case EventDeclarationSyntax @event:
+                        return $"event '{@event.Identifier.Text}'";
+                }
                 parent = parent.Parent;
             }
-            return "code block";
+            return "unknown context";
         }
     }
 }

@@ -1,3 +1,5 @@
+using System;
+using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -69,7 +71,10 @@ namespace RustAnalyzer.Utils
                 messageBuilder.AppendFormat("   = help: {0}\n", formattedHelp);
             }
 
-            if (!string.IsNullOrEmpty(info.Example))
+            if (
+                !string.IsNullOrEmpty(info.Example)
+                && info.Example != "// Example of proper method usage"
+            )
             {
                 var formattedExample = FormatMessageWithParameters(
                     info.Example,

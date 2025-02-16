@@ -4,6 +4,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.CodeAnalysis.Diagnostics;
+using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.Analyzers
 {
@@ -15,23 +16,29 @@ namespace RustAnalyzer.Analyzers
 
         private static readonly LocalizableString Title =
             "Direct call to LoadDefaultMessages detected";
-        private static readonly LocalizableString MessageFormat =
-            "Method 'LoadDefaultMessages' should not be called directly. It is automatically called by the plugin system.\n"
-            + "Just declare it as:\n"
-            + "protected override void LoadDefaultMessages()\n"
+
+        private static readonly string NoteTemplate =
+            "Method 'LoadDefaultMessages' is automatically called by the plugin system";
+
+        private static readonly string HelpTemplate =
+            "Remove the direct call and declare the method as:";
+
+        private static readonly string ExampleTemplate =
+            "protected override void LoadDefaultMessages()\n"
             + "{\n"
             + "    lang.RegisterMessages(new Dictionary<string, string>\n"
             + "    {\n"
             + "        [\"Example\"] = \"This is an example message!\"\n"
             + "    }, this);\n"
             + "}";
+
         private static readonly LocalizableString Description =
             "LoadDefaultMessages is automatically called by the plugin system and should not be called directly.";
 
         private static readonly DiagnosticDescriptor Rule = new DiagnosticDescriptor(
             DiagnosticId,
             Title,
-            MessageFormat,
+            "{0}", // Placeholder for dynamic description
             Category,
             DiagnosticSeverity.Error,
             isEnabledByDefault: true,
@@ -59,8 +66,7 @@ namespace RustAnalyzer.Analyzers
                 // Проверяем, что вызывается LoadDefaultMessages
                 if (memberAccess.Name.Identifier.Text == "LoadDefaultMessages")
                 {
-                    var diagnostic = Diagnostic.Create(Rule, invocation.GetLocation());
-                    context.ReportDiagnostic(diagnostic);
+                    ReportDiagnostic(context, memberAccess.Name.GetLocation());
                 }
             }
             // Проверяем прямой вызов метода (без this.)
@@ -69,9 +75,31 @@ namespace RustAnalyzer.Analyzers
                 && identifier.Identifier.Text == "LoadDefaultMessages"
             )
             {
-                var diagnostic = Diagnostic.Create(Rule, invocation.GetLocation());
-                context.ReportDiagnostic(diagnostic);
+                ReportDiagnostic(context, identifier.GetLocation());
             }
+        }
+
+        private static void ReportDiagnostic(SyntaxNodeAnalysisContext context, Location location)
+        {
+            var sourceText = location.SourceTree?.GetText();
+            if (sourceText == null)
+                return;
+
+            var formatInfo = new RustDiagnosticFormatter.DiagnosticFormatInfo
+            {
+                ErrorCode = DiagnosticId,
+                ErrorTitle = "Direct call to LoadDefaultMessages is not allowed",
+                Location = location,
+                SourceText = sourceText,
+                MessageParameters = new string[0],
+                Note = NoteTemplate,
+                Help = HelpTemplate,
+                Example = ExampleTemplate,
+            };
+
+            var dynamicDescription = RustDiagnosticFormatter.FormatDiagnostic(formatInfo);
+            var diagnostic = Diagnostic.Create(Rule, location, dynamicDescription);
+            context.ReportDiagnostic(diagnostic);
         }
     }
 }
