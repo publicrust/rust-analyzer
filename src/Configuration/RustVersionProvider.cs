@@ -35,9 +35,6 @@ namespace RustAnalyzer.Configuration
                 {
                     HooksConfiguration.Initialize(regularProvider);
                     initialized = true;
-                    Console.WriteLine(
-                        $"[RustAnalyzer] Initialized regular hooks for version: {_version}"
-                    );
                 }
                 else
                 {

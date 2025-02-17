@@ -69,17 +69,8 @@ namespace RustAnalyzer.Analyzers
         {
             var classSymbol = (INamedTypeSymbol)context.Symbol;
 
-            System.Console.WriteLine($"[DEBUG] Analyzing class: {classSymbol.Name}");
-
             // Получаем все поля с [PluginReference]
             var pluginReferenceFields = GetPluginReferenceFields(classSymbol).ToList();
-            System.Console.WriteLine(
-                $"[DEBUG] Found {pluginReferenceFields.Count} plugin reference fields:"
-            );
-            foreach (var field in pluginReferenceFields)
-            {
-                System.Console.WriteLine($"[DEBUG] - {field.Name}");
-            }
 
             if (!pluginReferenceFields.Any())
                 return;
@@ -92,7 +83,6 @@ namespace RustAnalyzer.Analyzers
 
             if (onServerInitMethod == null)
             {
-                System.Console.WriteLine("[DEBUG] OnServerInitialized method not found");
                 foreach (var field in pluginReferenceFields)
                 {
                     var diagnostic = Diagnostic.Create(
@@ -113,7 +103,6 @@ namespace RustAnalyzer.Analyzers
 
             if (methodSyntax == null || methodSyntax.Body == null)
             {
-                System.Console.WriteLine("[DEBUG] Method body is null");
                 foreach (var field in pluginReferenceFields)
                 {
                     var diagnostic = Diagnostic.Create(
@@ -130,28 +119,17 @@ namespace RustAnalyzer.Analyzers
             var semanticModel = context.Compilation.GetSemanticModel(methodSyntax.SyntaxTree);
             var nullChecks = GetNullChecks(methodSyntax, semanticModel);
 
-            System.Console.WriteLine($"[DEBUG] Found {nullChecks.Count} null checks in method");
-
-            // Проверяем каждое поле с [PluginReference]
             var uncheckedFields = new List<IFieldSymbol>();
             foreach (var field in pluginReferenceFields)
             {
                 if (!IsFieldCheckedForNull(field, nullChecks))
                 {
-                    System.Console.WriteLine($"[DEBUG] Field {field.Name} is not checked for null");
                     uncheckedFields.Add(field);
-                }
-                else
-                {
-                    System.Console.WriteLine($"[DEBUG] Field {field.Name} has null check");
                 }
             }
 
             if (uncheckedFields.Any())
             {
-                System.Console.WriteLine(
-                    $"[DEBUG] Creating diagnostics for {uncheckedFields.Count} fields"
-                );
                 var properties = ImmutableDictionary<string, string>.Empty.Add(
                     "FieldNames",
                     string.Join(",", uncheckedFields.Select(f => f.Name))
@@ -435,33 +413,19 @@ namespace RustAnalyzer.Analyzers
             // Ищем все проверки на null в методе
             var binaryExpressions = method.DescendantNodes().OfType<BinaryExpressionSyntax>();
 
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] Found {binaryExpressions.Count()} total binary expressions"
-            );
-
             foreach (var expression in binaryExpressions)
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Checking binary expression: {expression} of kind {expression.Kind()}"
-                );
-
                 // Проверяем сложные логические выражения
                 if (
                     expression.OperatorToken.IsKind(SyntaxKind.BarBarToken)
                     || expression.OperatorToken.IsKind(SyntaxKind.AmpersandAmpersandToken)
                 )
                 {
-                    System.Console.WriteLine(
-                        $"[PluginDependencyAnalyzer] Found logical expression: {expression}"
-                    );
                     var symbols = GetSymbolsFromNullChecks(expression, semanticModel);
                     foreach (var symbol in symbols)
                     {
                         if (symbol != null)
                         {
-                            System.Console.WriteLine(
-                                $"[PluginDependencyAnalyzer] Found null check in logical expression for: {symbol.Name}"
-                            );
                             nullChecks.Add(symbol);
                         }
                     }
@@ -469,9 +433,6 @@ namespace RustAnalyzer.Analyzers
                 // Проверяем простые сравнения с null
                 else if (expression.OperatorToken.IsKind(SyntaxKind.EqualsEqualsToken))
                 {
-                    System.Console.WriteLine(
-                        $"[PluginDependencyAnalyzer] Found equality check: {expression}"
-                    );
                     if (IsNullComparison(expression))
                     {
                         var nonNullSide =
@@ -481,9 +442,6 @@ namespace RustAnalyzer.Analyzers
                         var symbol = semanticModel.GetSymbolInfo(nonNullSide).Symbol;
                         if (symbol != null)
                         {
-                            System.Console.WriteLine(
-                                $"[PluginDependencyAnalyzer] Found null check for: {symbol.Name} ({symbol.Kind})"
-                            );
                             nullChecks.Add(symbol);
                         }
                     }
@@ -493,15 +451,8 @@ namespace RustAnalyzer.Analyzers
             // Также ищем проверки через is null pattern
             var isPatternExpressions = method.DescendantNodes().OfType<IsPatternExpressionSyntax>();
 
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] Found {isPatternExpressions.Count()} is pattern expressions"
-            );
-
             foreach (var isPattern in isPatternExpressions)
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Checking is pattern: {isPattern}"
-                );
                 if (
                     isPattern.Pattern is ConstantPatternSyntax cp
                     && cp.Expression is LiteralExpressionSyntax les
@@ -511,9 +462,6 @@ namespace RustAnalyzer.Analyzers
                     var symbol = semanticModel.GetSymbolInfo(isPattern.Expression).Symbol;
                     if (symbol != null)
                     {
-                        System.Console.WriteLine(
-                            $"[PluginDependencyAnalyzer] Found null check (is pattern) for: {symbol.Name} ({symbol.Kind})"
-                        );
                         nullChecks.Add(symbol);
                     }
                 }
@@ -529,16 +477,9 @@ namespace RustAnalyzer.Analyzers
         {
             var symbols = new List<ISymbol>();
 
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] Analyzing complex expression: {expression}"
-            );
-
             // Рекурсивно проверяем левую часть
             if (expression.Left is BinaryExpressionSyntax leftBinary)
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Recursing into left part: {leftBinary}"
-                );
                 symbols.AddRange(GetSymbolsFromNullChecks(leftBinary, semanticModel));
             }
             else if (
@@ -546,9 +487,6 @@ namespace RustAnalyzer.Analyzers
                 && IsNullComparison(leftNullCheck)
             )
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Found null check in left part: {leftNullCheck}"
-                );
                 var nonNullSide =
                     leftNullCheck.Left is LiteralExpressionSyntax
                         ? leftNullCheck.Right
@@ -556,9 +494,6 @@ namespace RustAnalyzer.Analyzers
                 var symbol = semanticModel.GetSymbolInfo(nonNullSide).Symbol;
                 if (symbol != null)
                 {
-                    System.Console.WriteLine(
-                        $"[PluginDependencyAnalyzer] Found symbol in left part: {symbol.Name}"
-                    );
                     symbols.Add(symbol);
                 }
             }
@@ -566,9 +501,6 @@ namespace RustAnalyzer.Analyzers
             // Рекурсивно проверяем правую часть
             if (expression.Right is BinaryExpressionSyntax rightBinary)
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Recursing into right part: {rightBinary}"
-                );
                 symbols.AddRange(GetSymbolsFromNullChecks(rightBinary, semanticModel));
             }
             else if (
@@ -576,9 +508,6 @@ namespace RustAnalyzer.Analyzers
                 && IsNullComparison(rightNullCheck)
             )
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Found null check in right part: {rightNullCheck}"
-                );
                 var nonNullSide =
                     rightNullCheck.Left is LiteralExpressionSyntax
                         ? rightNullCheck.Right
@@ -586,9 +515,6 @@ namespace RustAnalyzer.Analyzers
                 var symbol = semanticModel.GetSymbolInfo(nonNullSide).Symbol;
                 if (symbol != null)
                 {
-                    System.Console.WriteLine(
-                        $"[PluginDependencyAnalyzer] Found symbol in right part: {symbol.Name}"
-                    );
                     symbols.Add(symbol);
                 }
             }
@@ -598,10 +524,6 @@ namespace RustAnalyzer.Analyzers
 
         private bool IsNullComparison(ExpressionSyntax expression)
         {
-            Console.WriteLine(
-                $"[RustAnalyzer] Checking expression for null comparison: {expression.Kind()} - {expression}"
-            );
-
             // Проверяем прямое сравнение с null (x == null или null == x)
             if (expression is BinaryExpressionSyntax binaryExpression)
             {
@@ -610,11 +532,6 @@ namespace RustAnalyzer.Analyzers
                     var isLeftNull = binaryExpression.Left.IsKind(SyntaxKind.NullLiteralExpression);
                     var isRightNull = binaryExpression.Right.IsKind(
                         SyntaxKind.NullLiteralExpression
-                    );
-
-                    Console.WriteLine($"[RustAnalyzer] Binary expression: {binaryExpression}");
-                    Console.WriteLine(
-                        $"[RustAnalyzer] Left is null: {isLeftNull}, Right is null: {isRightNull}"
                     );
 
                     return isLeftNull || isRightNull;
@@ -629,7 +546,6 @@ namespace RustAnalyzer.Analyzers
                     && constantPattern.Expression.IsKind(SyntaxKind.NullLiteralExpression)
                 )
                 {
-                    Console.WriteLine($"[RustAnalyzer] Is pattern expression: {isPattern}");
                     return true;
                 }
             }
@@ -640,55 +556,28 @@ namespace RustAnalyzer.Analyzers
                 && prefixUnary.OperatorToken.IsKind(SyntaxKind.ExclamationToken)
             )
             {
-                Console.WriteLine($"[RustAnalyzer] Prefix unary expression: {prefixUnary}");
                 return true;
             }
 
             // Проверяем приведение к bool (if(x) или if(!x))
             if (expression is IdentifierNameSyntax)
             {
-                Console.WriteLine($"[RustAnalyzer] Identifier name expression: {expression}");
                 return true;
             }
 
-            Console.WriteLine($"[RustAnalyzer] Expression is not a null check: {expression}");
             return false;
         }
 
         private bool IsFieldCheckedForNull(IFieldSymbol field, HashSet<ISymbol> nullChecks)
         {
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] Checking if field {field.Name} is checked for null"
-            );
-            System.Console.WriteLine($"[PluginDependencyAnalyzer] Field type: {field.Type}");
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] Field containing type: {field.ContainingType}"
-            );
-
             foreach (var check in nullChecks)
             {
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Comparing with null check: {check.Name} ({check.Kind})"
-                );
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Check type: {check.GetType()}"
-                );
-                System.Console.WriteLine(
-                    $"[PluginDependencyAnalyzer] Check containing type: {check.ContainingType}"
-                );
-
                 if (SymbolComparer.Equals(check, field))
                 {
-                    System.Console.WriteLine(
-                        $"[PluginDependencyAnalyzer] Found matching null check for field {field.Name}"
-                    );
                     return true;
                 }
             }
 
-            System.Console.WriteLine(
-                $"[PluginDependencyAnalyzer] No matching null check found for field {field.Name}"
-            );
             return false;
         }
     }

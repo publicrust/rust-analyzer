@@ -38,21 +38,14 @@ namespace RustAnalyzer.AnalyzersFix
             if (root == null)
                 return;
 
-            System.Console.WriteLine(
-                $"[DEBUG] RegisterCodeFixesAsync: Found {context.Diagnostics.Count()} diagnostics"
-            );
-
             // Получаем все поля, которые нужно исправить
             var fieldNames = new HashSet<string>();
             var classDeclaration = default(ClassDeclarationSyntax);
 
             foreach (var diagnostic in context.Diagnostics)
             {
-                System.Console.WriteLine($"[DEBUG] Processing diagnostic: {diagnostic.Id}");
-
                 if (diagnostic.Properties.TryGetValue("FieldNames", out var fields))
                 {
-                    System.Console.WriteLine($"[DEBUG] Found fields in diagnostic: {fields}");
                     foreach (var field in fields.Split(','))
                     {
                         fieldNames.Add(field);
@@ -80,10 +73,6 @@ namespace RustAnalyzer.AnalyzersFix
 
             if (classDeclaration == null || !fieldNames.Any())
                 return;
-
-            System.Console.WriteLine(
-                $"[DEBUG] Registering fix for fields: {string.Join(", ", fieldNames)}"
-            );
 
             // Регистрируем один CodeFix для всех полей
             context.RegisterCodeFix(
@@ -148,10 +137,6 @@ namespace RustAnalyzer.AnalyzersFix
             CancellationToken cancellationToken
         )
         {
-            System.Console.WriteLine(
-                $"[DEBUG] AddDependencyChecksAsync: Adding checks for {string.Join(", ", fieldNames)}"
-            );
-
             var root = await document.GetSyntaxRootAsync(cancellationToken);
             if (root == null)
                 return document;
@@ -182,23 +167,16 @@ namespace RustAnalyzer.AnalyzersFix
                 .Where(name => !string.IsNullOrEmpty(name))
                 .ToList();
 
-            System.Console.WriteLine(
-                $"[DEBUG] Found existing checks for: {string.Join(", ", existingChecks)}"
-            );
-
             var newChecks = fieldNames
                 .Where(name => !existingChecks.Contains(name))
                 .Select(name =>
                 {
-                    System.Console.WriteLine($"[DEBUG] Creating check for: {name}");
                     return CreateNullCheck(name);
                 })
                 .ToList();
 
             if (newChecks.Any())
             {
-                System.Console.WriteLine($"[DEBUG] Adding {newChecks.Count} new checks");
-
                 // Добавляем все проверки в начало метода
                 var newBody = newOnServerInitialized.Body!.WithStatements(
                     SyntaxFactory.List(newChecks.Concat(newOnServerInitialized.Body.Statements))

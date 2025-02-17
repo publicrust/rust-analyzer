@@ -62,10 +62,6 @@ namespace RustAnalyzer.Analyzers
                     var attrName = attr.AttributeClass.Name;
                     var attrFullName = attr.AttributeClass.ToDisplayString();
 
-                    Console.WriteLine(
-                        $"[RustAnalyzer] Found attribute: {attrName} ({attrFullName})"
-                    );
-
                     return CommandStructureInfo.CommandStructures.Keys.Any(ca =>
                         attrName.Equals(ca, StringComparison.OrdinalIgnoreCase)
                         || attrName.Equals(ca + "Attribute", StringComparison.OrdinalIgnoreCase)
@@ -77,10 +73,6 @@ namespace RustAnalyzer.Analyzers
                     );
                 })
                 .ToList();
-
-            Console.WriteLine(
-                $"[RustAnalyzer] Found command attributes: {string.Join(", ", commandAttributes.Select(a => a.AttributeClass?.Name))}"
-            );
 
             // Если есть атрибуты команд, проверяем их структуру
             if (commandAttributes.Any())
@@ -96,9 +88,6 @@ namespace RustAnalyzer.Analyzers
                         ? attributeName.Substring(0, attributeName.Length - "Attribute".Length)
                         : attributeName;
 
-                    Console.WriteLine(
-                        $"[RustAnalyzer] Checking attribute: {attributeName} (structure: {structureName})"
-                    );
                     var structure = CommandStructureInfo.CommandStructures[structureName];
 
                     // Проверяем, что атрибут имеет конструктор с параметром name
@@ -115,9 +104,6 @@ namespace RustAnalyzer.Analyzers
                     // Проверяем параметры метода
                     if (!IsValidParameterStructure(methodSymbol, structure))
                     {
-                        Console.WriteLine(
-                            $"[RustAnalyzer] Invalid parameter structure for {attributeName}"
-                        );
                         ReportDiagnostic(
                             context,
                             methodDeclaration,
@@ -131,17 +117,12 @@ namespace RustAnalyzer.Analyzers
                 CommandUtils.IsCommand(methodSymbol) && !HooksConfiguration.IsHook(methodSymbol)
             )
             {
-                Console.WriteLine($"[RustAnalyzer] Method looks like a command by name");
                 // Проверяем, соответствует ли метод хотя бы одной из известных структур
                 var matchingStructures = CommandStructureInfo
                     .CommandStructures.Values.Where(structure =>
                         IsValidParameterStructure(methodSymbol, structure)
                     )
                     .ToList();
-
-                Console.WriteLine(
-                    $"[RustAnalyzer] Matching structures: {string.Join(", ", matchingStructures.Select(s => s.AttributeName))}"
-                );
 
                 if (!matchingStructures.Any())
                 {
@@ -159,21 +140,8 @@ namespace RustAnalyzer.Analyzers
 
         private bool IsValidParameterStructure(IMethodSymbol method, CommandStructure structure)
         {
-            Console.WriteLine(
-                $"[RustAnalyzer] Checking parameters for {method.Name} against {structure.AttributeName}"
-            );
-            Console.WriteLine(
-                $"[RustAnalyzer] Method parameters: {string.Join(", ", method.Parameters.Select(p => $"{p.Type.ToDisplayString()} {p.Name}"))}"
-            );
-            Console.WriteLine(
-                $"[RustAnalyzer] Expected parameters: {string.Join(", ", structure.ParameterTypes.Zip(structure.ParameterNames, (t, n) => $"{t} {n}"))}"
-            );
-
             if (method.Parameters.Length != structure.ParameterTypes.Length)
             {
-                Console.WriteLine(
-                    $"[RustAnalyzer] Parameter count mismatch: {method.Parameters.Length} vs {structure.ParameterTypes.Length}"
-                );
                 return false;
             }
 
@@ -182,14 +150,9 @@ namespace RustAnalyzer.Analyzers
                 var parameter = method.Parameters[i];
                 var expectedType = structure.ParameterTypes[i];
 
-                Console.WriteLine(
-                    $"[RustAnalyzer] Checking parameter {i}: {parameter.Type.ToDisplayString()} vs {expectedType}"
-                );
-
                 // Проверяем тип параметра
                 if (!IsMatchingType(parameter.Type, expectedType))
                 {
-                    Console.WriteLine($"[RustAnalyzer] Type mismatch for parameter {i}");
                     return false;
                 }
 
@@ -197,12 +160,8 @@ namespace RustAnalyzer.Analyzers
                 if (HasCommandAttribute(method, structure.AttributeName))
                 {
                     var expectedName = structure.ParameterNames[i];
-                    Console.WriteLine(
-                        $"[RustAnalyzer] Checking parameter name: {parameter.Name} vs {expectedName}"
-                    );
                     if (parameter.Name != expectedName)
                     {
-                        Console.WriteLine($"[RustAnalyzer] Name mismatch for parameter {i}");
                         return false;
                     }
                 }
@@ -214,9 +173,6 @@ namespace RustAnalyzer.Analyzers
         private bool IsMatchingType(ITypeSymbol actualType, string expectedType)
         {
             var actualTypeName = actualType.ToDisplayString();
-            Console.WriteLine(
-                $"[RustAnalyzer] Comparing types: {actualTypeName} vs {expectedType}"
-            );
 
             // Обрабатываем специальные случаи
             if (expectedType == "ConsoleSystem.Arg" && actualTypeName.EndsWith("ConsoleSystem.Arg"))
@@ -229,7 +185,6 @@ namespace RustAnalyzer.Analyzers
                 || actualTypeName == $"Oxide.Game.Rust.Libraries.{expectedType}"
                 || actualTypeName == $"Oxide.Core.Libraries.{expectedType}";
 
-            Console.WriteLine($"[RustAnalyzer] Type match result: {result}");
             return result;
         }
 
