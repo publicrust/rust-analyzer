@@ -152,7 +152,6 @@ namespace RustAnalyzer
             // Проверяем, есть ли конфигурация для этого плагина
             if (!PluginMethodsConfiguration.HasPlugin(pluginName))
             {
-                ReportDebug(invocation, $"No configuration for plugin {pluginName}");
                 return;
             }
 
