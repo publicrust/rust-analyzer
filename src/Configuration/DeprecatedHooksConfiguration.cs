@@ -30,7 +30,6 @@ namespace RustAnalyzer.src.Configuration
                     continue;
 
                 MethodSignatureModel? newHook = null;
-                Console.WriteLine($"[RustAnalyzer] {pair.Key} {pair.Value}");
                 if (!string.IsNullOrWhiteSpace(pair.Value))
                 {
                     newHook = HooksUtils.ParseHookString(pair.Value);
