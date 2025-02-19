@@ -56,7 +56,7 @@ namespace RustAnalyzer
             if (methodSignature == null)
                 return false;
 
-            return _hooks.Any(s => s.HookName == methodSignature.HookName);
+            return _hooks.Any(s => s.Signature.Name == methodSignature.Name);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace RustAnalyzer
             if (methodSignature == null)
                 return false;
 
-            return _hooks.Any(s => s.HookName == methodSignature.HookName);
+            return _hooks.Any(s => s.Signature.Name == methodSignature.Name);
         }
 
         /// <summary>
@@ -96,7 +96,7 @@ namespace RustAnalyzer
 
             var candidates = _hooks.Select(h =>
                 (
-                    text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})",
+                    text: $"{h.Signature.Name}({string.Join(", ", h.Signature.Parameters.Select(p => p.Type))})",
                     context: h
                 )
             );
@@ -111,7 +111,7 @@ namespace RustAnalyzer
         /// </summary>
         public static PluginHookModel GetPluginInfo(string hookName)
         {
-            return _hooks.FirstOrDefault(h => h.HookName == hookName);
+            return _hooks.FirstOrDefault(h => h.Signature.Name == hookName);
         }
     }
 }

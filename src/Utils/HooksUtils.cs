@@ -85,20 +85,20 @@ namespace RustAnalyzer.Utils
             return false;
         }
 
-        public static HookModel GetMethodSignature(IMethodSymbol method)
+        public static MethodSignatureModel GetMethodSignature(IMethodSymbol method)
         {
             if (method == null)
                 return null;
 
             var parameters = method
-                .Parameters.Select(p => new HookParameter
+                .Parameters.Select(p => new MethodParameter
                 {
                     Type = GetFriendlyTypeName(p.Type),
                     Name = p.Name,
                 })
                 .ToList();
 
-            return new HookModel { HookName = method.Name, HookParameters = parameters };
+            return new MethodSignatureModel { Name = method.Name, Parameters = parameters };
         }
 
         public static string GetFriendlyTypeName(ITypeSymbol type)
@@ -130,7 +130,7 @@ namespace RustAnalyzer.Utils
             );
         }
 
-        public static HookModel ParseHookString(string hookString)
+        public static MethodSignatureModel ParseHookString(string hookString)
         {
             if (string.IsNullOrWhiteSpace(hookString))
             {
@@ -163,21 +163,21 @@ namespace RustAnalyzer.Utils
                     // Handle type-only format
                     if (parts.Length == 1)
                     {
-                        return new HookParameter { Type = parts[0] };
+                        return new MethodParameter { Type = parts[0] };
                     }
 
                     // Handle generic types with parameter names
                     if (parts[1].Contains("<"))
                     {
-                        return new HookParameter { Type = parts[0] };
+                        return new MethodParameter { Type = parts[0] };
                     }
 
                     // Handle type with parameter name
-                    return new HookParameter { Type = parts[0], Name = parts[1] };
+                    return new MethodParameter { Type = parts[0], Name = parts[1] };
                 })
                 .ToList();
 
-            return new HookModel { HookName = hookName, HookParameters = parameterList };
+            return new MethodSignatureModel { Name = hookName, Parameters = parameterList };
         }
     }
 }

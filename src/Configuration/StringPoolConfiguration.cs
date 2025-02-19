@@ -3,146 +3,67 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using RustAnalyzer.src.Models.StringPool;
-using RustAnalyzer.src.Services;
-using RustAnalyzer.src.StringPool.Interfaces;
 using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.src.Configuration
 {
     public static class StringPoolConfiguration
     {
-        private static IStringPoolProvider? _currentProvider;
         private static Dictionary<string, uint> _toNumber = new();
-        private static readonly Dictionary<
-            (string TypeName, string PropertyName),
-            PropertyConfig
-        > PropertyConfigs = new();
-        private static readonly Dictionary<
-            (string TypeName, string MethodName),
-            MethodConfig
-        > MethodConfigs = new();
+        private static readonly Dictionary<(string TypeName, string PropertyName), PropertyConfig> PropertyConfigs = new();
+        private static readonly Dictionary<(string TypeName, string MethodName), MethodConfig> MethodConfigs = new();
 
-        public static void Initialize(IStringPoolProvider provider)
+        public static void Initialize(Dictionary<string, uint> stringPool)
         {
-            if (provider == null)
+            if (stringPool == null)
             {
-                throw new ArgumentNullException(nameof(provider));
+                throw new ArgumentNullException(nameof(stringPool));
             }
 
-            try
-            {
-                _currentProvider = provider;
-                _toNumber = provider.GetToNumber();
-                InitializePropertyConfigs();
-                InitializeMethodConfigs();
-            }
-            catch (Exception)
-            {
-                _currentProvider = null;
-                _toNumber = new Dictionary<string, uint>();
-            }
+            _toNumber = stringPool;
+            InitializePropertyConfigs();
+            InitializeMethodConfigs();
+            Console.WriteLine($"[RustAnalyzer] Loaded {stringPool.Count} string pool entries");
         }
 
         private static void InitializePropertyConfigs()
         {
-            var configs = new List<PropertyConfig>
+            PropertyConfigs.Clear();
+            foreach (var pair in _toNumber)
             {
-                new PropertyConfig("BaseNetworkable", "PrefabName", PrefabNameCheckType.FullPath),
-                new PropertyConfig(
-                    "BaseNetworkable",
-                    "ShortPrefabName",
-                    PrefabNameCheckType.ShortName
-                ),
-                new PropertyConfig("ItemDefinition", "shortname", PrefabNameCheckType.ShortName),
-            };
+                var parts = pair.Key.Split('.');
+                if (parts.Length != 2)
+                    continue;
 
-            foreach (var config in configs)
-            {
-                PropertyConfigs[(config.TypeName, config.PropertyName)] = config;
+                var typeName = parts[0];
+                var propertyName = parts[1];
+
+                PropertyConfigs.Add(
+                    (typeName, propertyName),
+                    new PropertyConfig(typeName, propertyName, PrefabNameCheckType.FullPath)
+                );
             }
         }
 
         private static void InitializeMethodConfigs()
         {
-            var configs = new List<MethodConfig>
+            MethodConfigs.Clear();
+            foreach (var pair in _toNumber)
             {
-                new MethodConfig(
-                    "GameManager",
-                    "CreateEntity",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "BaseEntity",
-                    "Spawn",
-                    new List<int>(),
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "PrefabAttribute",
-                    "server",
-                    new List<int>(),
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "PrefabAttribute",
-                    "client",
-                    new List<int>(),
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "GameManifest",
-                    "PathToStringID",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "StringPool",
-                    "Add",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "GameManager",
-                    "FindPrefab",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "ItemManager",
-                    "CreateByName",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.ShortName
-                ),
-                new MethodConfig(
-                    "ItemManager",
-                    "FindItemDefinition",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.ShortName
-                ),
-                new MethodConfig(
-                    "GameManager",
-                    "LoadPrefab",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "PrefabAttribute",
-                    "Find",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-                new MethodConfig(
-                    "StringPool",
-                    "Get",
-                    new List<int> { 0 },
-                    PrefabNameCheckType.FullPath
-                ),
-            };
+                var parts = pair.Key.Split('.');
+                if (parts.Length != 2)
+                    continue;
 
-            foreach (var config in configs)
-            {
-                MethodConfigs[(config.TypeName, config.MethodName)] = config;
+                var typeName = parts[0];
+                var methodName = parts[1];
+
+                if (methodName.Contains("("))
+                {
+                    MethodConfigs.Add(
+                        (typeName, methodName),
+                        new MethodConfig(typeName, methodName, new List<int>(), PrefabNameCheckType.FullPath)
+                    );
+                }
             }
         }
 
@@ -188,22 +109,28 @@ namespace RustAnalyzer.src.Configuration
             return StringSimilarity.FindSimilar(invalidPath, _toNumber.Keys);
         }
 
-        public static string? CurrentVersion => _currentProvider?.Version;
-
-        public static Dictionary<string, uint> ToNumber => _toNumber;
-
-        public static PropertyConfig? GetPropertyConfig(string typeName, string propertyName)
+        public static bool TryGetPropertyConfig(string typeName, string propertyName, out PropertyConfig config)
         {
-            return PropertyConfigs.TryGetValue((typeName, propertyName), out var config)
-                ? config
-                : null;
+            return PropertyConfigs.TryGetValue((typeName, propertyName), out config);
         }
 
-        public static MethodConfig? GetMethodConfig(string typeName, string methodName)
+        public static bool TryGetMethodConfig(string typeName, string methodName, out MethodConfig config)
         {
-            return MethodConfigs.TryGetValue((typeName, methodName), out var config)
-                ? config
-                : null;
+            return MethodConfigs.TryGetValue((typeName, methodName), out config);
+        }
+
+        public static MethodConfig GetMethodConfig(string typeName, string methodName)
+        {
+            if (TryGetMethodConfig(typeName, methodName, out var config))
+                return config;
+            return null;
+        }
+
+        public static PropertyConfig GetPropertyConfig(string typeName, string propertyName)
+        {
+            if (TryGetPropertyConfig(typeName, propertyName, out var config))
+                return config;
+            return null;
         }
     }
 }

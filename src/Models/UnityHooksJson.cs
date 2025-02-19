@@ -19,16 +19,17 @@ namespace RustAnalyzer
         /// <summary>
         /// Gets the list of hooks as a strongly-typed collection.
         /// </summary>
-        public static List<HookModel> GetHooks()
+        public static List<MethodSignatureModel> GetHooks()
         {
             try
             {
                 using var doc = JsonDocument.Parse(Json);
-                var hooks = new List<HookModel>();
+                var hooks = new List<MethodSignatureModel>();
 
                 foreach (var hook in doc.RootElement.GetProperty("hooks").EnumerateArray())
                 {
                     var hookString = hook.GetString();
+                    
                     if (string.IsNullOrWhiteSpace(hookString))
                     {
                         continue;

@@ -183,7 +183,7 @@ namespace RustAnalyzer.Analyzers
             if (hook == null)
                 return Enumerable.Empty<string>();
 
-            return hook.HookParameters.Select(p => p.Type);
+            return hook.Parameters.Select(p => p.Type);
         }
 
         private static bool ShouldSkip(IMethodSymbol methodSymbol)
