@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.CodeAnalysis;
 using RustAnalyzer.Models;
 using RustAnalyzer.Utils;
@@ -28,6 +30,7 @@ namespace RustAnalyzer.src.Configuration
                     continue;
 
                 MethodSignatureModel? newHook = null;
+                Console.WriteLine($"[RustAnalyzer] {pair.Key} {pair.Value}");
                 if (!string.IsNullOrWhiteSpace(pair.Value))
                 {
                     newHook = HooksUtils.ParseHookString(pair.Value);
@@ -43,21 +46,47 @@ namespace RustAnalyzer.src.Configuration
         public static bool IsHook(IMethodSymbol method, out DeprecatedHookModel? hookInfo)
         {
             hookInfo = null;
-
-            if (method == null || !HooksUtils.IsRustClass(method.ContainingType))
+            if (method == null)
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
             if (methodSignature == null)
                 return false;
 
-            hookInfo = _hooks.FirstOrDefault(h => h.OldHook.Name == methodSignature.Name);
-            return hookInfo != null;
+            foreach (var hook in _hooks)
+            {
+                // Проверяем имя хука
+                if (hook.OldHook.Name != methodSignature.Name)
+                    continue;
+
+                // Проверяем количество параметров
+                if (hook.OldHook.Parameters.Count != methodSignature.Parameters.Count)
+                    continue;
+
+                // Проверяем типы параметров
+                bool allParametersMatch = true;
+                for (int i = 0; i < methodSignature.Parameters.Count; i++)
+                {
+                    if (
+                        hook.OldHook.Parameters[i].Type
+                        != methodSignature.Parameters[i].Type
+                    )
+                    {
+                        allParametersMatch = false;
+                        break;
+                    }
+                }
+
+                if (allParametersMatch)
+                {
+                    hookInfo = hook;
+                    return true;
+                }
+            }
+
+            return false;
         }
 
-        public static bool IsHook(IMethodSymbol method)
-        {
-            return IsHook(method, out _);
-        }
+        public static bool IsHook(IMethodSymbol method) => IsHook(method, out _);
     }
 }
