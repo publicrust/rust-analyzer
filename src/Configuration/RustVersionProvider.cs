@@ -6,12 +6,12 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.Models;
 using RustAnalyzer.src.Configuration;
+using System.Text.Json;
 
 namespace RustAnalyzer.Configuration
 {
     public static class RustVersionProvider
     {
-        private static string _version = "LastVersion";
         private static bool _isInitialized;
         private static readonly object _initLock = new object();
         private const string ConfigFolder = ".rust-analyzer";
@@ -28,13 +28,6 @@ namespace RustAnalyzer.Configuration
                 if (_isInitialized)
                     return;
 
-                if (!options.TryGetValue("build_property.RustVersion", out var version))
-                {
-                    version = "LastVersion";
-                }
-
-                _version = version;
-
                 var configHooks = additionalFiles.ReadConfig<List<HookImplementationModel>>(
                     Path.Combine(ConfigFolder, "hooks.json")
                 );
@@ -43,6 +36,14 @@ namespace RustAnalyzer.Configuration
                 );
                 var configStringPool = additionalFiles.ReadConfig<Dictionary<string, uint>>(
                     Path.Combine(ConfigFolder, "stringPool.json")
+                );
+
+                var configHooksPlugin = additionalFiles.ReadConfig<List<PluginHookDefinition>>(
+                    Path.Combine(ConfigFolder, "hooksPlugin.json")
+                );
+
+                var configApiMethodsPlugin = additionalFiles.ReadConfig<List<PluginHookDefinition>>(
+                    Path.Combine(ConfigFolder, "apiMethodsPlugin.json")
                 );
 
                 var initialized = false;
@@ -63,6 +64,20 @@ namespace RustAnalyzer.Configuration
 
                 try
                 {
+                    if (configHooksPlugin != null)
+                    {
+                        PluginHooksConfiguration.Initialize(configHooksPlugin);
+                        initialized = true;
+                        Console.WriteLine($"[RustAnalyzer] Initialized plugin hooks from configuration file");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[RustAnalyzer] Failed to initialize plugin hooks: {ex.Message}");
+                }
+
+                try
+                {
                     if (configDeprecatedHooks != null)
                     {
                         DeprecatedHooksConfiguration.Initialize(configDeprecatedHooks);
@@ -73,6 +88,20 @@ namespace RustAnalyzer.Configuration
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[RustAnalyzer] Failed to initialize deprecated hooks: {ex.Message}");
+                }
+
+                try
+                {
+                    if (configApiMethodsPlugin != null)
+                    {
+                        PluginMethodsConfiguration.Initialize(configApiMethodsPlugin);
+                        initialized = true;
+                        Console.WriteLine($"[RustAnalyzer] Initialized plugin methods from configuration file");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[RustAnalyzer] Failed to initialize plugin methods: {ex.Message}");
                 }
 
                 try
@@ -101,7 +130,5 @@ namespace RustAnalyzer.Configuration
                 }
             }
         }
-
-        public static string Version => _version;
     }
 }

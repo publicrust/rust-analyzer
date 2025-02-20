@@ -1,491 +1,94 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using RustAnalyzer.Models;
+using RustAnalyzer.Utils;
 
 namespace RustAnalyzer
 {
-    public class PluginMethodParameter
+    public class PluginMethodParameter : MethodParameter
     {
-        public string Name { get; set; }
-        public string Type { get; set; }
-        public bool IsOptional { get; set; }
-        public string DefaultValue { get; set; }
+        public override bool IsOptional { get; set; }
+        public override string? DefaultValue { get; set; }
     }
 
-    public class PluginMethod
+    public class PluginMethod : MethodSignatureModel
     {
-        public string Name { get; set; }
-        public string ReturnType { get; set; }
-        public List<PluginMethodParameter> Parameters { get; set; }
-        public string Description { get; set; }
+        public string ReturnType { get; set; } = "void";
+
+        public override string ToString()
+        {
+            return $"{ReturnType} {Name}({string.Join(", ", Parameters)})";
+        }
     }
 
     public class PluginConfiguration
     {
-        public string PluginName { get; set; }
-        public Dictionary<string, PluginMethod> Methods { get; set; }
+        public string PluginName { get; }
+        public Dictionary<string, PluginMethod> Methods { get; }
+
+        public PluginConfiguration(string pluginName)
+        {
+            PluginName = pluginName ?? throw new ArgumentNullException(nameof(pluginName));
+            Methods = new Dictionary<string, PluginMethod>();
+        }
     }
 
     public static class PluginMethodsConfiguration
     {
-        private static readonly Dictionary<string, PluginConfiguration> Configurations =
-            new Dictionary<string, PluginConfiguration>
-            {
-                {
-                    "ImageLibrary",
-                    new PluginConfiguration
-                    {
-                        PluginName = "ImageLibrary",
-                        Methods = new Dictionary<string, PluginMethod>
-                        {
-                            {
-                                "AddImage",
-                                new PluginMethod
-                                {
-                                    Name = "AddImage",
-                                    ReturnType = "bool",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter { Name = "url", Type = "string" },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                    Description = "Adds an image from URL",
-                                }
-                            },
-                            {
-                                "AddImageData",
-                                new PluginMethod
-                                {
-                                    Name = "AddImageData",
-                                    ReturnType = "bool",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "array",
-                                            Type = "byte[]",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                    Description = "Adds an image from byte array",
-                                }
-                            },
-                            {
-                                "GetImageURL",
-                                new PluginMethod
-                                {
-                                    Name = "GetImageURL",
-                                    ReturnType = "string",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                            IsOptional = true,
-                                            DefaultValue = "0",
-                                        },
-                                    },
-                                    Description = "Gets image URL by name",
-                                }
-                            },
-                            {
-                                "GetImage",
-                                new PluginMethod
-                                {
-                                    Name = "GetImage",
-                                    ReturnType = "string",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                            IsOptional = true,
-                                            DefaultValue = "0",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "returnUrl",
-                                            Type = "bool",
-                                            IsOptional = true,
-                                            DefaultValue = "false",
-                                        },
-                                    },
-                                    Description = "Gets image by name",
-                                }
-                            },
-                            {
-                                "GetImageList",
-                                new PluginMethod
-                                {
-                                    Name = "GetImageList",
-                                    ReturnType = "List<ulong>",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "name",
-                                            Type = "string",
-                                        },
-                                    },
-                                    Description = "Gets list of image IDs by name",
-                                }
-                            },
-                            {
-                                "GetSkinInfo",
-                                new PluginMethod
-                                {
-                                    Name = "GetSkinInfo",
-                                    ReturnType = "Dictionary<string, object>",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "name",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter { Name = "id", Type = "ulong" },
-                                    },
-                                    Description = "Gets skin information",
-                                }
-                            },
-                            {
-                                "HasImage",
-                                new PluginMethod
-                                {
-                                    Name = "HasImage",
-                                    ReturnType = "bool",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                        },
-                                    },
-                                    Description = "Checks if image exists",
-                                }
-                            },
-                            {
-                                "IsReady",
-                                new PluginMethod
-                                {
-                                    Name = "IsReady",
-                                    ReturnType = "bool",
-                                    Parameters = new List<PluginMethodParameter>(),
-                                    Description = "Checks if plugin is ready",
-                                }
-                            },
-                            {
-                                "ImportImageList",
-                                new PluginMethod
-                                {
-                                    Name = "ImportImageList",
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "title",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageList",
-                                            Type = "Dictionary<string, string>",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                            IsOptional = true,
-                                            DefaultValue = "0",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "replace",
-                                            Type = "bool",
-                                            IsOptional = true,
-                                            DefaultValue = "false",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                    Description = "Imports list of images",
-                                }
-                            },
-                            {
-                                "ImportItemList",
-                                new PluginMethod
-                                {
-                                    Name = "ImportItemList",
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "title",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "itemList",
-                                            Type = "Dictionary<string, Dictionary<ulong, string>>",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "replace",
-                                            Type = "bool",
-                                            IsOptional = true,
-                                            DefaultValue = "false",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                    Description = "Imports list of items",
-                                }
-                            },
-                            {
-                                "ImportImageData",
-                                new PluginMethod
-                                {
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "title",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageList",
-                                            Type = "Dictionary<string, byte[]>",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                            IsOptional = true,
-                                            DefaultValue = "0",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "replace",
-                                            Type = "bool",
-                                            IsOptional = true,
-                                            DefaultValue = "false",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                }
-                            },
-                            {
-                                "LoadImageList",
-                                new PluginMethod
-                                {
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "title",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageList",
-                                            Type = "List<KeyValuePair<string, ulong>>",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "callback",
-                                            Type = "Action",
-                                            IsOptional = true,
-                                            DefaultValue = "null",
-                                        },
-                                    },
-                                }
-                            },
-                            {
-                                "RemoveImage",
-                                new PluginMethod
-                                {
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                        },
-                                    },
-                                }
-                            },
-                            {
-                                "SendImage",
-                                new PluginMethod
-                                {
-                                    ReturnType = "void",
-                                    Parameters = new List<PluginMethodParameter>
-                                    {
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "player",
-                                            Type = "BasePlayer",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageName",
-                                            Type = "string",
-                                        },
-                                        new PluginMethodParameter
-                                        {
-                                            Name = "imageId",
-                                            Type = "ulong",
-                                            IsOptional = true,
-                                            DefaultValue = "0",
-                                        },
-                                    },
-                                }
-                            },
-                        },
-                    }
-                },
-                {
-                    "CopyPaste",
-                    new PluginConfiguration
-                    {
-                        PluginName = "CopyPaste",
-                        Methods = new Dictionary<string, PluginMethod>
-                        {
-                            ["TryCopyFromSteamId"] = new PluginMethod
-                            {
-                                ReturnType = "object",
-                                Parameters = new List<PluginMethodParameter>
-                                {
-                                    new PluginMethodParameter { Name = "userID", Type = "ulong" },
-                                    new PluginMethodParameter
-                                    {
-                                        Name = "filename",
-                                        Type = "string",
-                                    },
-                                    new PluginMethodParameter { Name = "args", Type = "string[]" },
-                                },
-                            },
-                            ["TryPasteFromSteamId"] = new PluginMethod
-                            {
-                                ReturnType = "object",
-                                Parameters = new List<PluginMethodParameter>
-                                {
-                                    new PluginMethodParameter { Name = "userID", Type = "ulong" },
-                                    new PluginMethodParameter
-                                    {
-                                        Name = "filename",
-                                        Type = "string",
-                                    },
-                                    new PluginMethodParameter { Name = "args", Type = "string[]" },
-                                },
-                            },
-                            ["TryPasteFromVector3"] = new PluginMethod
-                            {
-                                ReturnType = "object",
-                                Parameters = new List<PluginMethodParameter>
-                                {
-                                    new PluginMethodParameter { Name = "pos", Type = "Vector3" },
-                                    new PluginMethodParameter
-                                    {
-                                        Name = "rotationCorrection",
-                                        Type = "float",
-                                    },
-                                    new PluginMethodParameter
-                                    {
-                                        Name = "filename",
-                                        Type = "string",
-                                    },
-                                    new PluginMethodParameter { Name = "args", Type = "string[]" },
-                                },
-                            },
-                        },
-                    }
-                },
-            };
+        private static readonly Dictionary<string, PluginConfiguration> Configurations = new();
 
-        public static PluginConfiguration GetConfiguration(string pluginName)
+        public static void Initialize(List<PluginHookDefinition> methods)
+        {
+            if (methods == null)
+            {
+                throw new ArgumentNullException(nameof(methods));
+            }
+
+            try
+            {
+                Configurations.Clear();
+                var groupedMethods = methods.GroupBy(m => m.PluginName);
+
+                foreach (var group in groupedMethods)
+                {
+                    if (string.IsNullOrEmpty(group.Key))
+                    {
+                        Console.WriteLine("[RustAnalyzer] Warning: Found method without plugin name");
+                        continue;
+                    }
+
+                    var config = new PluginConfiguration(group.Key);
+
+                    foreach (var hookDef in group)
+                    {
+                        var method = HooksUtils.ParseHookString(hookDef.HookSignature) as PluginMethod;
+                        if (method == null)
+                        {
+                            Console.WriteLine($"[RustAnalyzer] Warning: Failed to parse hook signature: {hookDef.HookSignature}");
+                            continue;
+                        }
+                        config.Methods[method.Name] = method;
+                    }
+
+                    Configurations[group.Key] = config;
+                }
+
+                Console.WriteLine($"[RustAnalyzer] Loaded {Configurations.Count} plugin configurations with {methods.Count} methods");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[RustAnalyzer] Failed to initialize plugin methods: {ex.Message}");
+                Configurations.Clear();
+            }
+        }
+
+        public static PluginConfiguration? GetConfiguration(string pluginName)
         {
             return Configurations.TryGetValue(pluginName, out var config) ? config : null;
         }
 
-        public static PluginMethod GetMethod(string pluginName, string methodName)
+        public static PluginMethod? GetMethod(string pluginName, string methodName)
         {
             var config = GetConfiguration(pluginName);
             return config?.Methods.TryGetValue(methodName, out var method) == true ? method : null;

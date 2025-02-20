@@ -9,6 +9,8 @@ namespace RustAnalyzer.Models
     {
         public string Type { get; set; }
         public string Name { get; set; }
+        public virtual bool IsOptional { get; set; }
+        public virtual string? DefaultValue { get; set; }
 
         public override string ToString()
         {
