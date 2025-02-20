@@ -85,20 +85,20 @@ namespace RustAnalyzer.Utils
             return false;
         }
 
-        public static HookModel GetMethodSignature(IMethodSymbol method)
+        public static MethodSignatureModel GetMethodSignature(IMethodSymbol method)
         {
             if (method == null)
                 return null;
 
             var parameters = method
-                .Parameters.Select(p => new HookParameter
+                .Parameters.Select(p => new MethodParameter
                 {
                     Type = GetFriendlyTypeName(p.Type),
                     Name = p.Name,
                 })
                 .ToList();
 
-            return new HookModel { HookName = method.Name, HookParameters = parameters };
+            return new MethodSignatureModel { Name = method.Name, Parameters = parameters };
         }
 
         public static string GetFriendlyTypeName(ITypeSymbol type)
@@ -130,54 +130,125 @@ namespace RustAnalyzer.Utils
             );
         }
 
-        public static HookModel ParseHookString(string hookString)
+        public static MethodSignatureModel ParseHookString(string hookString)
         {
             if (string.IsNullOrWhiteSpace(hookString))
             {
                 return null;
             }
 
-            // Extracting the hook name and parameters
-            var openParenIndex = hookString.IndexOf('(');
-            var closeParenIndex = hookString.LastIndexOf(')');
+            // Поиск возвращаемого типа (если есть)
+            string returnType = "void";
+            string methodPart = hookString;
+            
+            var parts = hookString.Split(new[] { ' ' }, 2, StringSplitOptions.RemoveEmptyEntries);
+            if (parts.Length == 2 && !parts[0].Contains("("))
+            {
+                returnType = parts[0];
+                methodPart = parts[1];
+            }
+
+            // Извлечение имени метода и параметров
+            var openParenIndex = methodPart.IndexOf('(');
+            var closeParenIndex = methodPart.LastIndexOf(')');
 
             if (openParenIndex < 0 || closeParenIndex < 0 || closeParenIndex <= openParenIndex)
             {
                 throw new FormatException($"Invalid hook format: {hookString}");
             }
 
-            var hookName = hookString.Substring(0, openParenIndex).Trim();
-            var parameters = hookString.Substring(
+            var hookName = methodPart.Substring(0, openParenIndex).Trim();
+            var parameters = methodPart.Substring(
                 openParenIndex + 1,
                 closeParenIndex - openParenIndex - 1
             );
 
-            // Split parameters and handle both formats
-            var parameterList = parameters
-                .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(p =>
+            // Парсинг параметров с поддержкой опциональных параметров
+            var parameterList = new List<MethodParameter>();
+            if (!string.IsNullOrWhiteSpace(parameters))
+            {
+                var currentParam = new StringBuilder();
+                var bracketCount = 0;
+                
+                for (int i = 0; i < parameters.Length; i++)
                 {
-                    var parts = p.Trim()
-                        .Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
-
-                    // Handle type-only format
-                    if (parts.Length == 1)
+                    char c = parameters[i];
+                    if (c == '<') bracketCount++;
+                    else if (c == '>') bracketCount--;
+                    else if (c == ',' && bracketCount == 0)
                     {
-                        return new HookParameter { Type = parts[0] };
+                        ParseAndAddParameter(currentParam.ToString(), parameterList);
+                        currentParam.Clear();
+                        continue;
                     }
+                    currentParam.Append(c);
+                }
+                
+                if (currentParam.Length > 0)
+                {
+                    ParseAndAddParameter(currentParam.ToString(), parameterList);
+                }
+            }
 
-                    // Handle generic types with parameter names
-                    if (parts[1].Contains("<"))
-                    {
-                        return new HookParameter { Type = parts[0] };
-                    }
+            // Создаем базовую или расширенную модель в зависимости от наличия дополнительной информации
+            if (returnType == "void" && !parameterList.Any(p => p is PluginMethodParameter))
+            {
+                return new MethodSignatureModel { Name = hookName, Parameters = parameterList };
+            }
+            
+            return new PluginMethod 
+            { 
+                Name = hookName, 
+                Parameters = parameterList,
+                ReturnType = returnType
+            };
+        }
 
-                    // Handle type with parameter name
-                    return new HookParameter { Type = parts[0], Name = parts[1] };
-                })
-                .ToList();
+        private static void ParseAndAddParameter(string paramStr, List<MethodParameter> parameters)
+        {
+            var param = paramStr.Trim();
+            if (string.IsNullOrEmpty(param)) return;
 
-            return new HookModel { HookName = hookName, HookParameters = parameterList };
+            var parts = param.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            
+            // Проверяем наличие значения по умолчанию
+            string defaultValue = null;
+            bool isOptional = false;
+            
+            var equalsIndex = param.IndexOf('=');
+            if (equalsIndex != -1)
+            {
+                defaultValue = param.Substring(equalsIndex + 1).Trim();
+                param = param.Substring(0, equalsIndex).Trim();
+                isOptional = true;
+                parts = param.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+            }
+
+            if (parts.Length == 1)
+            {
+                parameters.Add(new MethodParameter { Type = parts[0] });
+            }
+            else
+            {
+                if (isOptional)
+                {
+                    parameters.Add(new PluginMethodParameter 
+                    { 
+                        Type = parts[0],
+                        Name = parts[1],
+                        IsOptional = true,
+                        DefaultValue = defaultValue
+                    });
+                }
+                else
+                {
+                    parameters.Add(new MethodParameter 
+                    { 
+                        Type = parts[0],
+                        Name = parts[1]
+                    });
+                }
+            }
         }
     }
 }

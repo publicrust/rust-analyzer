@@ -64,7 +64,7 @@ namespace RustAnalyzer
 
                 var newHookSignature =
                     deprecatedHook?.NewHook != null
-                        ? $"{deprecatedHook.NewHook.HookName}({string.Join(", ", deprecatedHook.NewHook.HookParameters)})"
+                        ? $"{deprecatedHook.NewHook.Name}({string.Join(", ", deprecatedHook.NewHook.Parameters)})"
                         : "no replacement";
 
                 var diagnostic = Diagnostic.Create(

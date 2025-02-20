@@ -50,8 +50,6 @@ namespace RustAnalyzer.Analyzers
             if (methodSymbol == null)
                 return;
 
-            Console.WriteLine($"[RustAnalyzer] Analyzing method: {methodSymbol.Name}");
-
             // Получаем атрибуты команд
             var commandAttributes = methodSymbol
                 .GetAttributes()

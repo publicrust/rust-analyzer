@@ -3,11 +3,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
-using RustAnalyzer.Configuration;
 using RustAnalyzer.Models;
-using RustAnalyzer.src.Hooks.Interfaces;
-using RustAnalyzer.src.Hooks.Providers;
-using RustAnalyzer.src.Services;
 using RustAnalyzer.Utils;
 
 namespace RustAnalyzer
@@ -17,68 +13,21 @@ namespace RustAnalyzer
     /// </summary>
     public static class HooksConfiguration
     {
-        private static IHooksProvider? _currentProvider;
         private static ImmutableList<HookModel> _hooks = ImmutableList<HookModel>.Empty;
 
         /// <summary>
         /// Initializes the hooks configuration with the specified provider
         /// </summary>
-        public static void Initialize(IHooksProvider provider)
+        public static void Initialize(List<HookModel> hooks)
         {
-            if (provider == null)
+            if (hooks == null)
             {
-                throw new ArgumentNullException(nameof(provider));
+                throw new ArgumentNullException(nameof(hooks));
             }
 
-            try
-            {
-                var regularProvider = ProviderDiscovery.CreateRegularHooksProvider("Universal");
-                if (regularProvider == null)
-                {
-                    _currentProvider = provider;
-                    _hooks = ImmutableList.CreateRange(provider.GetHooks());
-                    return;
-                }
-
-                var regularHooks = regularProvider.GetHooks();
-                var providerHooks = provider.GetHooks();
-
-                var allHooks = new List<HookModel>();
-                var processedHookSignatures = new HashSet<string>();
-
-                foreach (var hook in regularHooks)
-                {
-                    allHooks.Add(hook);
-                    var signature =
-                        $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
-                    processedHookSignatures.Add(signature);
-                }
-
-                foreach (var hook in providerHooks)
-                {
-                    var signature =
-                        $"{hook.HookName}:{string.Join(",", hook.HookParameters.Select(p => p.Type))}";
-                    if (!processedHookSignatures.Contains(signature))
-                    {
-                        allHooks.Add(hook);
-                        processedHookSignatures.Add(signature);
-                    }
-                }
-
-                _currentProvider = provider;
-                _hooks = ImmutableList.CreateRange(allHooks);
-            }
-            catch (Exception)
-            {
-                _currentProvider = null;
-                _hooks = ImmutableList<HookModel>.Empty;
-            }
+            _hooks = ImmutableList.CreateRange(hooks);
+            Console.WriteLine($"[RustAnalyzer] Loaded {hooks.Count} hooks");
         }
-
-        /// <summary>
-        /// Get current version of game
-        /// </summary>
-        public static string? CurrentVersion => _currentProvider?.Version;
 
         /// <summary>
         /// Gets all configured hook signatures.
@@ -91,45 +40,14 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsHook(IMethodSymbol method)
         {
-            if (
-                method == null
-                || method.ContainingType == null
-                || !HooksUtils.IsRustClass(method.ContainingType)
-                || method.IsStatic
-            )
+            if (method == null || !HooksUtils.IsRustClass(method.ContainingType))
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
             if (methodSignature == null)
                 return false;
 
-            // Находим все хуки с таким же именем
-            var matchingHooks = _hooks.Where(s => s.HookName == methodSignature.HookName).ToList();
-
-            foreach (var hook in matchingHooks)
-            {
-                // Проверяем количество параметров
-                if (hook.HookParameters.Count != method.Parameters.Length)
-                    continue;
-
-                bool allParametersMatch = true;
-                for (int i = 0; i < method.Parameters.Length; i++)
-                {
-                    var methodParam = method.Parameters[i].Type;
-                    var hookParamName = hook.HookParameters[i];
-
-                    // Проверяем соответствие типов
-                    if (!HooksUtils.IsTypeCompatible(methodParam, hookParamName.Type))
-                    {
-                        allParametersMatch = false;
-                        break;
-                    }
-                }
-
-                if (allParametersMatch)
-                    return true;
-            }
-            return false;
+            return _hooks.Any(s => s.Signature.Name == methodSignature.Name);
         }
 
         /// <summary>
@@ -138,18 +56,17 @@ namespace RustAnalyzer
         /// </summary>
         public static bool IsKnownHook(IMethodSymbol method)
         {
-            if (
-                method == null
-                || method.ContainingType == null
-                || !HooksUtils.IsRustClass(method.ContainingType)
-            )
+            if (method == null || !HooksUtils.IsRustClass(method.ContainingType))
                 return false;
 
             var methodSignature = HooksUtils.GetMethodSignature(method);
             if (methodSignature == null)
                 return false;
 
-            return _hooks.Any(s => s.HookName == methodSignature.HookName);
+            return _hooks.Any(s =>
+                s.Signature.Name == methodSignature.Name
+                && s.Signature.Parameters.SequenceEqual(methodSignature.Parameters)
+            );
         }
 
         /// <summary>
@@ -169,7 +86,7 @@ namespace RustAnalyzer
             // Включаем полную сигнатуру в текст для сравнения
             var candidates = _hooks.Select(h =>
                 (
-                    text: $"{h.HookName}({string.Join(", ", h.HookParameters.Select(p => p.Type))})",
+                    text: $"{h.Signature.Name}({string.Join(", ", h.Signature.Parameters.Select(p => p.Type))})",
                     context: h
                 )
             );

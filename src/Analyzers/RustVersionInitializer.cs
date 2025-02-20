@@ -46,30 +46,34 @@ namespace RustAnalyzer.Analyzers
             context.ConfigureGeneratedCodeAnalysis(GeneratedCodeAnalysisFlags.None);
             context.EnableConcurrentExecution();
 
-            context.RegisterSyntaxNodeAction(
-                syntaxContext =>
-                {
-                    var options = syntaxContext.Options.AnalyzerConfigOptionsProvider.GlobalOptions;
+            context.RegisterCompilationStartAction(compilationContext =>
+            {
+                var options = compilationContext.Options.AnalyzerConfigOptionsProvider.GlobalOptions;
+                var additionalFiles = compilationContext.Options.AdditionalFiles;
 
-                    if (!options.TryGetValue("build_property.rustversion", out var version))
+                if (!options.TryGetValue("build_property.rustversion", out var version))
+                {
+                    compilationContext.RegisterSyntaxNodeAction(context =>
                     {
-                        syntaxContext.ReportDiagnostic(
+                        context.ReportDiagnostic(
                             Diagnostic.Create(MissingVersionError, Location.None)
                         );
-                        return;
-                    }
+                    }, SyntaxKind.CompilationUnit);
+                    return;
+                }
 
-                    RustVersionProvider.Initialize(options);
+                RustVersionProvider.Initialize(options, additionalFiles);
 
-                    if (RustVersionProvider.IsInitialized)
+                if (RustVersionProvider.IsInitialized)
+                {
+                    compilationContext.RegisterSyntaxNodeAction(context =>
                     {
-                        syntaxContext.ReportDiagnostic(
+                        context.ReportDiagnostic(
                             Diagnostic.Create(InitializationRule, Location.None, version)
                         );
-                    }
-                },
-                SyntaxKind.CompilationUnit
-            );
+                    }, SyntaxKind.CompilationUnit);
+                }
+            });
         }
     }
 }

@@ -13,7 +13,7 @@ namespace RustAnalyzer
     /// </summary>
     public static class UnityHooksConfiguration
     {
-        private static readonly ImmutableList<HookModel> _hooks;
+        private static readonly ImmutableList<MethodSignatureModel> _hooks;
 
         static UnityHooksConfiguration()
         {
@@ -24,14 +24,14 @@ namespace RustAnalyzer
             }
             catch (Exception ex)
             {
-                _hooks = ImmutableList<HookModel>.Empty;
+                _hooks = ImmutableList<MethodSignatureModel>.Empty;
             }
         }
 
         /// <summary>
         /// Gets all configured hook signatures.
         /// </summary>
-        public static ImmutableList<HookModel> HookSignatures => _hooks;
+        public static ImmutableList<MethodSignatureModel> HookSignatures => _hooks;
 
         /// <summary>
         /// Checks if a given method name or signature is a known hook.
@@ -51,7 +51,7 @@ namespace RustAnalyzer
                 return false;
 
             // ��������� ������� ���� � ����� ������
-            return _hooks.Any(s => s.HookName == methodSignature.HookName);
+            return _hooks.Any(s => s.Name == methodSignature.Name);
         }
 
         /// <summary>
@@ -71,13 +71,13 @@ namespace RustAnalyzer
             if (methodSignature == null)
                 return false;
 
-            return _hooks.Any(s => s.HookName == methodSignature.HookName);
+            return _hooks.Any(s => s.Name == methodSignature.Name);
         }
 
         /// <summary>
         /// Returns hooks with similar names to the method.
         /// </summary>
-        public static IEnumerable<HookModel> GetSimilarHooks(
+        public static IEnumerable<MethodSignatureModel> GetSimilarHooks(
             IMethodSymbol method,
             int maxSuggestions = 3
         )
@@ -87,9 +87,9 @@ namespace RustAnalyzer
                 || method.ContainingType == null
                 || !HooksUtils.IsUnityClass(method.ContainingType)
             )
-                return Enumerable.Empty<HookModel>();
+                return Enumerable.Empty<MethodSignatureModel>();
 
-            var candidates = _hooks.Select(h => (text: h.HookName, context: h));
+            var candidates = _hooks.Select(h => (text: h.Name, context: h));
             return StringSimilarity
                 .FindSimilarWithContext(method.Name, candidates, maxSuggestions)
                 .Select(r => r.Context);

@@ -157,7 +157,7 @@ namespace RustAnalyzer.Analyzers
 
             var similarPluginHooks = PluginHooksConfiguration
                 .GetSimilarHooks(methodSymbol)
-                .Select(h => h.ToString() + $" (from plugin: {h.PluginName})");
+                .Select(h => h.ToString() + $" (from plugin: {h.Method.ClassName})");
 
             var similarUnityHooks = UnityHooksConfiguration
                 .GetSimilarHooks(methodSymbol)
@@ -183,7 +183,7 @@ namespace RustAnalyzer.Analyzers
             if (hook == null)
                 return Enumerable.Empty<string>();
 
-            return hook.HookParameters.Select(p => p.Type);
+            return hook.Signature.Parameters.Select(p => p.Type);
         }
 
         private static bool ShouldSkip(IMethodSymbol methodSymbol)

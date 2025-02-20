@@ -61,7 +61,7 @@ namespace RustAnalyzer
                 {
                     // Get the expected hook signature
                     var expectedSignature = HooksConfiguration
-                        .HookSignatures.Where(h => h.HookName == methodSymbol.Name)
+                        .HookSignatures.Where(h => h.Signature.Name == methodSymbol.Name)
                         .Select(s => s.ToString())
                         .ToArray();
 

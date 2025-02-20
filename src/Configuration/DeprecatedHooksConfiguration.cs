@@ -2,40 +2,44 @@ using System;
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Text;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using Microsoft.CodeAnalysis;
-using Microsoft.CodeAnalysis.CSharp.Syntax;
 using RustAnalyzer.Models;
-using RustAnalyzer.src.DeprecatedHooks.Interfaces;
 using RustAnalyzer.Utils;
 
 namespace RustAnalyzer.src.Configuration
 {
     public static class DeprecatedHooksConfiguration
     {
-        private static IDeprecatedHooksProvider _provider = null!;
         private static List<DeprecatedHookModel> _hooks = new();
 
-        /// <summary>
-        /// Initializes the hooks configuration with the specified provider
-        /// </summary>
-        public static void Initialize(IDeprecatedHooksProvider provider)
+        public static void Initialize(Dictionary<string, string> deprecatedHooks)
         {
-            if (provider == null)
+            if (deprecatedHooks == null)
             {
-                throw new ArgumentNullException(nameof(provider));
+                throw new ArgumentNullException(nameof(deprecatedHooks));
             }
 
-            try
+            var hooks = new List<DeprecatedHookModel>();
+
+            foreach (var pair in deprecatedHooks)
             {
-                _provider = provider;
-                _hooks = provider.GetHooks();
+                var oldHook = HooksUtils.ParseHookString(pair.Key);
+                if (oldHook == null)
+                    continue;
+
+                MethodSignatureModel? newHook = null;
+                if (!string.IsNullOrWhiteSpace(pair.Value))
+                {
+                    newHook = HooksUtils.ParseHookString(pair.Value);
+                }
+
+                hooks.Add(new DeprecatedHookModel { OldHook = oldHook, NewHook = newHook });
             }
-            catch (Exception)
-            {
-                _provider = null;
-                _hooks = new List<DeprecatedHookModel>();
-            }
+
+            _hooks = hooks;
+            Console.WriteLine($"[RustAnalyzer] Loaded {hooks.Count} deprecated hooks");
         }
 
         public static bool IsHook(IMethodSymbol method, out DeprecatedHookModel? hookInfo)
@@ -51,20 +55,20 @@ namespace RustAnalyzer.src.Configuration
             foreach (var hook in _hooks)
             {
                 // Проверяем имя хука
-                if (hook.OldHook.HookName != methodSignature.HookName)
+                if (hook.OldHook.Name != methodSignature.Name)
                     continue;
 
                 // Проверяем количество параметров
-                if (hook.OldHook.HookParameters.Count != methodSignature.HookParameters.Count)
+                if (hook.OldHook.Parameters.Count != methodSignature.Parameters.Count)
                     continue;
 
                 // Проверяем типы параметров
                 bool allParametersMatch = true;
-                for (int i = 0; i < methodSignature.HookParameters.Count; i++)
+                for (int i = 0; i < methodSignature.Parameters.Count; i++)
                 {
                     if (
-                        hook.OldHook.HookParameters[i].Type
-                        != methodSignature.HookParameters[i].Type
+                        hook.OldHook.Parameters[i].Type
+                        != methodSignature.Parameters[i].Type
                     )
                     {
                         allParametersMatch = false;

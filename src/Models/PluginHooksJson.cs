@@ -109,36 +109,5 @@ namespace RustAnalyzer.Models
             Tuple.Create("IQCases", "OnBuyCase(BasePlayer,string)"),
             Tuple.Create("IQCases", "OnSellCase(BasePlayer,string)"),
         };
-
-        public static List<PluginHookModel> GetHooks()
-        {
-            try
-            {
-                return Hooks
-                    .Select(h =>
-                    {
-                        var hookModel = HooksUtils.ParseHookString(h.Item2);
-                        if (hookModel == null)
-                            return null;
-
-                        return new PluginHookModel
-                        {
-                            PluginName = h.Item1,
-                            HookName = hookModel.HookName,
-                            HookParameters = hookModel.HookParameters,
-                        };
-                    })
-                    .Where(h => h != null)
-                    .Select(h => h!)
-                    .ToList();
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine(
-                    $"[RustAnalyzer] Failed to load plugin hooks PluginHooksJson {ex.Message}"
-                );
-                return new List<PluginHookModel>();
-            }
-        }
     }
 }
