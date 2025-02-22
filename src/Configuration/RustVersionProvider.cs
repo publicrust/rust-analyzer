@@ -6,6 +6,7 @@ using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Diagnostics;
 using RustAnalyzer.Models;
 using RustAnalyzer.src.Configuration;
+using RustAnalyzer.src.Models.StringPool;
 using System.Text.Json;
 
 namespace RustAnalyzer.Configuration
@@ -44,6 +45,10 @@ namespace RustAnalyzer.Configuration
 
                 var configApiMethodsPlugin = additionalFiles.ReadConfig<List<PluginHookDefinition>>(
                     Path.Combine(ConfigFolder, "apiMethodsPlugin.json")
+                );
+
+                var configStringPoolMethods = additionalFiles.ReadConfig<List<StringPoolMethodDefinition>>(
+                    Path.Combine(ConfigFolder, "stringPoolMethods.json")
                 );
 
                 var initialized = false;
@@ -102,6 +107,20 @@ namespace RustAnalyzer.Configuration
                 catch (Exception ex)
                 {
                     Console.WriteLine($"[RustAnalyzer] Failed to initialize plugin methods: {ex.Message}");
+                }
+
+                try
+                {
+                    if (configStringPoolMethods != null)
+                    {
+                        StringPoolConfiguration.InitializeMethodConfigs(configStringPoolMethods);
+                        initialized = true;
+                        Console.WriteLine($"[RustAnalyzer] Initialized string pool methods from configuration file");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"[RustAnalyzer] Failed to initialize string pool methods: {ex.Message}");
                 }
 
                 try

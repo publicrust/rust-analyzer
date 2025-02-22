@@ -22,8 +22,29 @@ namespace RustAnalyzer.src.Configuration
 
             _toNumber = stringPool;
             InitializePropertyConfigs();
-            InitializeMethodConfigs();
             Console.WriteLine($"[RustAnalyzer] Loaded {stringPool.Count} string pool entries");
+        }
+
+        public static void InitializeMethodConfigs(List<StringPoolMethodDefinition> methodConfigs)
+        {
+            if (methodConfigs == null)
+            {
+                throw new ArgumentNullException(nameof(methodConfigs));
+            }
+
+            MethodConfigs.Clear();
+            foreach (var config in methodConfigs)
+            {
+                var methodConfig = new MethodConfig(
+                    config.TypeName,
+                    config.MethodName,
+                    config.ParameterIndices,
+                    config.CheckType
+                );
+                MethodConfigs[(config.TypeName, config.MethodName)] = methodConfig;
+            }
+
+            Console.WriteLine($"[RustAnalyzer] Loaded {methodConfigs.Count} string pool method configurations");
         }
 
         private static void InitializePropertyConfigs()
@@ -42,28 +63,6 @@ namespace RustAnalyzer.src.Configuration
                     (typeName, propertyName),
                     new PropertyConfig(typeName, propertyName, PrefabNameCheckType.FullPath)
                 );
-            }
-        }
-
-        private static void InitializeMethodConfigs()
-        {
-            MethodConfigs.Clear();
-            foreach (var pair in _toNumber)
-            {
-                var parts = pair.Key.Split('.');
-                if (parts.Length != 2)
-                    continue;
-
-                var typeName = parts[0];
-                var methodName = parts[1];
-
-                if (methodName.Contains("("))
-                {
-                    MethodConfigs.Add(
-                        (typeName, methodName),
-                        new MethodConfig(typeName, methodName, new List<int>(), PrefabNameCheckType.FullPath)
-                    );
-                }
             }
         }
 
