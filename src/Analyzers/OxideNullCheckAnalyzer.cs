@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
 using Microsoft.CodeAnalysis;
@@ -99,6 +100,27 @@ namespace OxideAnalyzers
                     })
                     .ToList();
 
+                // Собираем все проверки if до конца метода
+                var allIfStatements = methodDeclaration
+                    .DescendantNodes()
+                    .OfType<IfStatementSyntax>()
+                    .ToList();
+
+                // Собираем все условные выражения с операторами && и ||
+                var allBinaryExpressions = methodDeclaration
+                    .DescendantNodes()
+                    .OfType<BinaryExpressionSyntax>()
+                    .Where(be => 
+                        be.Kind() == SyntaxKind.LogicalAndExpression || 
+                        be.Kind() == SyntaxKind.LogicalOrExpression)
+                    .ToList();
+
+                // Собираем все условные доступы (операторы ?.)
+                var allConditionalAccesses = methodDeclaration
+                    .DescendantNodes()
+                    .OfType<ConditionalAccessExpressionSyntax>()
+                    .ToList();
+
                 foreach (var memberAccess in memberAccesses)
                 {
                     var memberName = memberAccess.Name.Identifier.Text;
@@ -107,65 +129,27 @@ namespace OxideAnalyzers
 
                     // Проверяем, находится ли это обращение внутри проверки на null
                     var isInsideNullCheck = false;
-                    var currentNode = memberAccess.Parent;
 
-                    // Собираем все проверки if до текущего использования
-                    var previousChecks = methodDeclaration
-                        .DescendantNodes()
-                        .OfType<IfStatementSyntax>()
-                        .TakeWhile(ifStmt => ifStmt.SpanStart < memberAccess.SpanStart)
-                        .Select(ifStmt => ifStmt.Condition.ToString())
-                        .ToList();
-
-                    // Проверяем все предыдущие условия
-                    if (
-                        previousChecks.Any(condition =>
-                            condition.Contains($"{parameter.Identifier.Text} == null")
-                            || condition.Contains($"{parameter.Identifier.Text}?.")
-                            || condition.Contains($"{parameter.Identifier.Text} is null")
-                            || condition.Contains($"!{parameter.Identifier.Text}.IsValid()")
-                            || // Добавляем проверку IsValid()
-                            condition.Contains($"{parameter.Identifier.Text}.{memberName} == null")
-                            || condition.Contains($"{parameter.Identifier.Text}?.{memberName}")
-                            || condition.Contains(
-                                $"{parameter.Identifier.Text}.{memberName} is null"
-                            )
-                        )
-                    )
+                    // Проверяем, является ли родительское выражение условным доступом
+                    if (IsPartOfConditionalAccess(memberAccess))
                     {
                         isInsideNullCheck = true;
                     }
                     else
                     {
-                        // Проверяем родительские if'ы
-                        while (currentNode != null && currentNode != methodDeclaration)
-                        {
-                            if (currentNode is IfStatementSyntax ifStatement)
-                            {
-                                var condition = ifStatement.Condition.ToString();
-                                if (
-                                    condition.Contains($"{parameter.Identifier.Text} == null")
-                                    || condition.Contains($"{parameter.Identifier.Text}?.")
-                                    || condition.Contains($"{parameter.Identifier.Text} is null")
-                                    || condition.Contains($"!{parameter.Identifier.Text}.IsValid()")
-                                    || // Добавляем проверку IsValid()
-                                    condition.Contains(
-                                        $"{parameter.Identifier.Text}.{memberName} == null"
-                                    )
-                                    || condition.Contains(
-                                        $"{parameter.Identifier.Text}?.{memberName}"
-                                    )
-                                    || condition.Contains(
-                                        $"{parameter.Identifier.Text}.{memberName} is null"
-                                    )
-                                )
-                                {
-                                    isInsideNullCheck = true;
-                                    break;
-                                }
-                            }
-                            currentNode = currentNode.Parent;
-                        }
+                        // Проверяем все предыдущие условия
+                        var parameterName = parameter.Identifier.Text;
+                        
+                        // Проверяем, защищено ли обращение предыдущими проверками на null
+                        isInsideNullCheck = IsProtectedByPreviousNullChecks(
+                            context,
+                            memberAccess,
+                            parameterName,
+                            memberName,
+                            allIfStatements,
+                            allBinaryExpressions,
+                            allConditionalAccesses
+                        );
                     }
 
                     if (!isInsideNullCheck)
@@ -181,6 +165,109 @@ namespace OxideAnalyzers
                     }
                 }
             }
+        }
+
+        private bool IsPartOfConditionalAccess(MemberAccessExpressionSyntax memberAccess)
+        {
+            // Проверяем, является ли memberAccess частью выражения с оператором ?.
+            var parent = memberAccess.Parent;
+            while (parent != null)
+            {
+                if (parent is ConditionalAccessExpressionSyntax conditionalAccess &&
+                    conditionalAccess.Expression.ToString() == memberAccess.Expression.ToString())
+                {
+                    return true;
+                }
+                parent = parent.Parent;
+            }
+            return false;
+        }
+
+        private bool IsProtectedByPreviousNullChecks(
+            SyntaxNodeAnalysisContext context,
+            MemberAccessExpressionSyntax memberAccess,
+            string parameterName,
+            string memberName,
+            IList<IfStatementSyntax> allIfStatements,
+            IList<BinaryExpressionSyntax> allBinaryExpressions,
+            IList<ConditionalAccessExpressionSyntax> allConditionalAccesses
+        )
+        {
+            // 1. Проверяем, находится ли memberAccess внутри блока if с проверкой на null
+            foreach (var ifStatement in allIfStatements)
+            {
+                // Проверяем, что memberAccess находится внутри блока if
+                if (ifStatement.Statement.DescendantNodesAndSelf().Contains(memberAccess))
+                {
+                    // Проверяем условие if
+                    if (ContainsNullCheck(ifStatement.Condition, parameterName, memberName))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            // 2. Проверяем, защищено ли memberAccess предыдущими проверками на null с операторами && и ||
+            SyntaxNode currentNode = memberAccess;
+            while (currentNode != null)
+            {
+                if (currentNode is BinaryExpressionSyntax binaryExpression &&
+                    binaryExpression.Kind() == SyntaxKind.LogicalAndExpression)
+                {
+                    // Проверяем, содержит ли левая часть && проверку на null
+                    if (ContainsNullCheck(binaryExpression.Left, parameterName, memberName))
+                    {
+                        return true;
+                    }
+                }
+                currentNode = currentNode.Parent;
+            }
+
+            // 3. Проверяем, защищено ли memberAccess предыдущими условными доступами
+            foreach (var conditionalAccess in allConditionalAccesses)
+            {
+                if (conditionalAccess.SpanStart < memberAccess.SpanStart &&
+                    conditionalAccess.Expression.ToString() == parameterName)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private bool ContainsNullCheck(SyntaxNode condition, string parameterName, string memberName)
+        {
+            // Проверяем простые условия
+            var conditionText = condition.ToString();
+            if (conditionText.Contains($"{parameterName} != null") ||
+                conditionText.Contains($"{parameterName} is not null") ||
+                conditionText.Contains($"!({parameterName} is null)") ||
+                conditionText.Contains($"!{parameterName}.IsNull()") ||
+                conditionText.Contains($"{parameterName}.IsValid()") ||
+                conditionText.Contains($"{parameterName}?.{memberName}") ||
+                conditionText.Contains($"{parameterName}.{memberName} != null"))
+            {
+                return true;
+            }
+
+            // Рекурсивно проверяем сложные условия с операторами && и ||
+            if (condition is BinaryExpressionSyntax binaryExpression)
+            {
+                if (binaryExpression.Kind() == SyntaxKind.LogicalAndExpression)
+                {
+                    // Для && достаточно, чтобы проверка была в левой части
+                    return ContainsNullCheck(binaryExpression.Left, parameterName, memberName);
+                }
+                else if (binaryExpression.Kind() == SyntaxKind.LogicalOrExpression)
+                {
+                    // Для || нужно, чтобы проверка была в обеих частях
+                    return ContainsNullCheck(binaryExpression.Left, parameterName, memberName) &&
+                           ContainsNullCheck(binaryExpression.Right, parameterName, memberName);
+                }
+            }
+
+            return false;
         }
     }
 }
