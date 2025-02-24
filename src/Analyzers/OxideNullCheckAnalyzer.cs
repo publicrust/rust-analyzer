@@ -205,6 +205,13 @@ namespace OxideAnalyzers
                         return true;
                     }
                 }
+                
+                // Проверяем, есть ли ранее проверка на null с return/continue/break
+                if (ifStatement.SpanStart < memberAccess.SpanStart && 
+                    IsNullCheckWithEarlyExit(ifStatement, parameterName))
+                {
+                    return true;
+                }
             }
 
             // 2. Проверяем, защищено ли memberAccess предыдущими проверками на null с операторами && и ||
@@ -268,6 +275,32 @@ namespace OxideAnalyzers
             }
 
             return false;
+        }
+
+        private bool IsNullCheckWithEarlyExit(IfStatementSyntax ifStatement, string parameterName)
+        {
+            // Проверяем, что условие проверяет параметр на null
+            var condition = ifStatement.Condition.ToString();
+            if (!(condition.Contains($"{parameterName} == null") || 
+                  condition.Contains($"{parameterName} is null")))
+            {
+                return false;
+            }
+
+            // Проверяем, что в теле if есть return, continue или break
+            if (ifStatement.Statement is BlockSyntax block)
+            {
+                return block.Statements.Any(stmt => 
+                    stmt is ReturnStatementSyntax || 
+                    stmt is ContinueStatementSyntax || 
+                    stmt is BreakStatementSyntax);
+            }
+            else
+            {
+                return ifStatement.Statement is ReturnStatementSyntax || 
+                       ifStatement.Statement is ContinueStatementSyntax || 
+                       ifStatement.Statement is BreakStatementSyntax;
+            }
         }
     }
 }
