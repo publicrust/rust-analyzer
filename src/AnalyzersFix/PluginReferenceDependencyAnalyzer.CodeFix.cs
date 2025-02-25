@@ -217,26 +217,9 @@ namespace RustAnalyzer.AnalyzersFix
                             SyntaxFactory.ArgumentList(
                                 SyntaxFactory.SingletonSeparatedList(
                                     SyntaxFactory.Argument(
-                                        SyntaxFactory.InterpolatedStringExpression(
-                                            SyntaxFactory.Token(
-                                                SyntaxKind.InterpolatedStringStartToken
-                                            ),
-                                            SyntaxFactory.List<InterpolatedStringContentSyntax>(
-                                                new InterpolatedStringContentSyntax[]
-                                                {
-                                                    SyntaxFactory
-                                                        .InterpolatedStringText()
-                                                        .WithTextToken(
-                                                            SyntaxFactory.Token(
-                                                                SyntaxFactory.TriviaList(),
-                                                                SyntaxKind.InterpolatedStringTextToken,
-                                                                $"{fieldName} plugin is not installed!",
-                                                                $"{fieldName} plugin is not installed!",
-                                                                SyntaxFactory.TriviaList()
-                                                            )
-                                                        ),
-                                                }
-                                            )
+                                        SyntaxFactory.LiteralExpression(
+                                            SyntaxKind.StringLiteralExpression,
+                                            SyntaxFactory.Literal(fieldName + " plugin is not installed!")
                                         )
                                     )
                                 )
