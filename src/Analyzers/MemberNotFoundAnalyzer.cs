@@ -69,15 +69,46 @@ namespace RustAnalyzer
             if (typeSymbol == null)
                 return;
 
-            var symbol = semanticModel.GetSymbolInfo(memberAccess.Name).Symbol;
+            var symbolInfo = semanticModel.GetSymbolInfo(memberAccess.Name);
+            var symbol = symbolInfo.Symbol;
+            
+            // Проверяем наличие символа и его доступность
             if (symbol != null)
+            {
+                // Если символ найден и это статический член, но доступ идет через экземпляр - сообщаем об ошибке
+                if (symbol.IsStatic && !memberAccess.Expression.IsKind(SyntaxKind.IdentifierName))
+                {
+                    // Это статический член, к которому обращаются через экземпляр - пропускаем,
+                    // так как это другая ошибка (CS0176)
+                    return;
+                }
+                
+                // Если символ найден и всё в порядке - выходим
                 return;
+            }
 
-            // Retrieve all members of the type, excluding compiler-generated and inaccessible members
+            // Проверяем кандидатов, если основной символ не найден
+            if (symbolInfo.CandidateSymbols.Length > 0)
+            {
+                // Если есть подходящие кандидаты - значит это другая проблема (например, неоднозначность)
+                return;
+            }
+
+            // Получаем все члены типа, включая статические
             var members = typeSymbol
                 .GetMembers()
                 .Where(m => !IsCompilerGenerated(m) && IsAccessibleMember(m))
                 .ToList();
+
+            // Добавляем статические члены из статического типа
+            var staticType = semanticModel.GetTypeInfo(memberAccess.Expression).Type as INamedTypeSymbol;
+            if (staticType != null)
+            {
+                members.AddRange(
+                    staticType.GetMembers()
+                        .Where(m => m.IsStatic && !IsCompilerGenerated(m) && IsAccessibleMember(m))
+                );
+            }
 
             // Find similar members
             var suggestions = FindSimilarMembers(memberName, members);
@@ -90,9 +121,9 @@ namespace RustAnalyzer
 
             var parameters = new[]
             {
-                memberKind, // {0} - тип члена (метод, свойство и т.д.)
-                memberName, // {1} - имя члена
-                typeSymbol.ToDisplayString(), // {2} - тип
+                memberKind,
+                memberName,
+                typeSymbol.ToDisplayString(),
             };
 
             var formatInfo = new RustDiagnosticFormatter.DiagnosticFormatInfo
