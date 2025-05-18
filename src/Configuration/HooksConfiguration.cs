@@ -47,7 +47,12 @@ namespace RustAnalyzer
             if (methodSignature == null)
                 return false;
 
-            return _hooks.Any(s => s.Signature.Name == methodSignature.Name);
+            return _hooks.Any(s => 
+                s.Signature.Name == methodSignature.Name &&
+                s.Signature.Parameters.Count == methodSignature.Parameters.Count &&
+                s.Signature.Parameters.Select(p => p.Type)
+                    .SequenceEqual(methodSignature.Parameters.Select(p => p.Type))
+            );
         }
 
         /// <summary>
@@ -65,7 +70,9 @@ namespace RustAnalyzer
 
             return _hooks.Any(s =>
                 s.Signature.Name == methodSignature.Name
-                && s.Signature.Parameters.SequenceEqual(methodSignature.Parameters)
+                && s.Signature.Parameters.Count == methodSignature.Parameters.Count
+                && s.Signature.Parameters.Select(p => p.Type)
+                    .SequenceEqual(methodSignature.Parameters.Select(p => p.Type))
             );
         }
 
