@@ -48,15 +48,6 @@ namespace RustAnalyzer
             isEnabledByDefault: true
         );
 
-        private static readonly DiagnosticDescriptor DebugRule = new DiagnosticDescriptor(
-            id: "RUST000042",
-            title: "Debug Info",
-            messageFormat: "{0}",
-            category: "Debug",
-            defaultSeverity: DiagnosticSeverity.Info,
-            isEnabledByDefault: true
-        );
-
         private SyntaxNodeAnalysisContext _currentContext;
 
         public override ImmutableArray<DiagnosticDescriptor> SupportedDiagnostics =>
@@ -64,8 +55,7 @@ namespace RustAnalyzer
                 InvalidMethodRule,
                 InvalidParametersRule,
                 InvalidGenericTypeRule,
-                VoidMethodWithGenericRule,
-                DebugRule
+                VoidMethodWithGenericRule
             );
 
         public override void Initialize(AnalysisContext context)
@@ -97,7 +87,6 @@ namespace RustAnalyzer
             var pluginName = GetPluginName(pluginExpression);
             if (string.IsNullOrEmpty(pluginName))
             {
-                ReportDebug(invocation, "Plugin name is empty");
                 return;
             }
 
@@ -107,13 +96,11 @@ namespace RustAnalyzer
 
             if (symbol == null)
             {
-                ReportDebug(invocation, $"Symbol is null for {pluginName}");
                 return;
             }
 
             if (!HasPluginReferenceAttribute(symbol))
             {
-                ReportDebug(invocation, $"No PluginReference attribute for {pluginName}");
                 return;
             }
 
@@ -121,7 +108,6 @@ namespace RustAnalyzer
             var arguments = invocation.ArgumentList.Arguments;
             if (arguments.Count == 0)
             {
-                ReportDebug(invocation, "No arguments in Call method");
                 return;
             }
 
@@ -131,7 +117,6 @@ namespace RustAnalyzer
                 || literal.Kind() != SyntaxKind.StringLiteralExpression
             )
             {
-                ReportDebug(invocation, "First argument is not a string literal");
                 return;
             }
 
@@ -150,7 +135,6 @@ namespace RustAnalyzer
                 var config = PluginMethodsConfiguration.GetConfiguration(pluginName);
                 if (config == null)
                 {
-                    ReportDebug(invocation, $"Configuration is null for {pluginName}");
                     return;
                 }
 
@@ -245,12 +229,6 @@ namespace RustAnalyzer
             }
         }
 
-        private void ReportDebug(SyntaxNode node, string message)
-        {
-            var diagnostic = Diagnostic.Create(DebugRule, node.GetLocation(), message);
-            _currentContext.ReportDiagnostic(diagnostic);
-        }
-
         private bool IsCallMethod(
             InvocationExpressionSyntax invocation,
             out ExpressionSyntax? pluginExpression
@@ -313,15 +291,6 @@ namespace RustAnalyzer
                 foreach (var attr in attributes)
                 {
                     var attrName = attr.AttributeClass?.Name;
-                    if (attrName != null)
-                    {
-                        var node = symbol.Locations.FirstOrDefault()?.SourceTree?.GetRoot()
-                            .FindNode(symbol.Locations.First().SourceSpan);
-                        if (node != null)
-                        {
-                            ReportDebug(node, $"Found attribute: {attrName}");
-                        }
-                    }
                     if (attrName == "PluginReference" || attrName == "PluginReferenceAttribute")
                         return true;
                 }
