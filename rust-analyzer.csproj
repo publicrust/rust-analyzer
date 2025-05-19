@@ -28,7 +28,13 @@
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.7.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
     <PackageReference Include="System.Text.Json" Version="8.0.0" />
+
+    <PackageReference Include="SuggestMembersAnalyzer" Version="1.0.3">
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
   </ItemGroup>
+
 
   <ItemGroup>
     <None Include="bin\$(Configuration)\$(TargetFramework)\rust-analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/" />
