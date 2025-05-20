@@ -50,6 +50,9 @@ namespace RustAnalyzer.Analyzers
             if (methodSymbol == null)
                 return;
 
+            if (HooksConfiguration.IsKnownHook(methodSymbol) || HooksConfiguration.IsKnownHook(methodSymbol))
+                return;
+
             // Получаем атрибуты команд
             var commandAttributes = methodSymbol
                 .GetAttributes()
