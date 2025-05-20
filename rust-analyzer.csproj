@@ -13,7 +13,7 @@
     <IsPackable>true</IsPackable>
     <RootNamespace>RustAnalyzer</RootNamespace>
     <AssemblyName>rust-analyzer</AssemblyName>
-    <Version>8.0.31</Version>
+    <Version>8.0.32</Version>
     <EnableNETAnalyzers>true</EnableNETAnalyzers>
     <AnalysisLevel>latest</AnalysisLevel>
     <EnforceExtendedAnalyzerRules>true</EnforceExtendedAnalyzerRules>
