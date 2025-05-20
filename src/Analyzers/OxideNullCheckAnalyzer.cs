@@ -55,8 +55,8 @@ namespace OxideAnalyzers
                 return;
 
             if (
-                !HooksConfiguration.IsHook(methodSymbol)
-                && !PluginHooksConfiguration.IsHook(methodSymbol)
+                !HooksConfiguration.IsKnownHook(methodSymbol)
+                && !PluginHooksConfiguration.IsKnownHook(methodSymbol)
             )
                 return;
 
