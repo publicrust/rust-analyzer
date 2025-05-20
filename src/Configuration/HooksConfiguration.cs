@@ -62,31 +62,29 @@ namespace RustAnalyzer
                 return false;
 
             var sig = HooksUtils.GetMethodSignature(method);
-            
-            // Найден ли подходящий хук в конфигурации
-            var matchingHooks = _hooks.Where(h => h.Signature.Name == method.Name).ToList();
-            
-            if (sig == null ||
+
+            if (sig == null || 
                 sig.Name != method.Name ||
                 sig.Parameters.Count != method.Parameters.Length)
             {
                 return false;
             }
 
-            // Проверяем совместимость каждого параметра - только по типам, игнорируем имена
-            var paramResults = sig.Parameters.Select((p, i) => new { 
-                Index = i,
-                Expected = p.Type, 
-                ExpectedName = p.Name,
-                Actual = method.Parameters[i].Type,
-                ActualName = method.Parameters[i].Name,
-                // Проверяем только соответствие типов, игнорируем имена параметров
-                IsCompatible = IsTypeCompatible(method.Parameters[i].Type, p.Type, method)
-            }).ToList();
-            
-            bool isCompatible = paramResults.All(x => x.IsCompatible);
-            
-            return isCompatible;
+            var matchingHooks = _hooks.Where(h => 
+                h.Signature.Name == method.Name && 
+                h.Signature.Parameters.Count == method.Parameters.Length &&
+                sig.Parameters.Select((p, i) => new { 
+                    Index = i,
+                    Expected = p.Type, 
+                    ExpectedName = p.Name,
+                    Actual = method.Parameters[i].Type,
+                    ActualName = method.Parameters[i].Name,
+                    // Проверяем только соответствие типов, игнорируем имена параметров
+                    IsCompatible = IsTypeCompatible(method.Parameters[i].Type, p.Type, method)
+                }).All(x => x.IsCompatible)
+            ).Any();
+
+            return matchingHooks;
         }
 
         /// <summary>
@@ -126,7 +124,7 @@ namespace RustAnalyzer
         /// Compatibility between actualType and expectedName string:
         /// inheritance in either direction + accounting for C# aliases.
         /// </summary>
-        private static bool IsTypeCompatible(ITypeSymbol actualType, string expectedName, IMethodSymbol context)
+        public static bool IsTypeCompatible(ITypeSymbol actualType, string expectedName, IMethodSymbol context)
         {
             // Общая обработка для массивов
             if (actualType is IArrayTypeSymbol arrayType)

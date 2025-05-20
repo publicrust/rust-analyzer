@@ -69,26 +69,35 @@ namespace RustAnalyzer
         /// <summary>
         /// Checks if a given method name or signature is a known plugin hook.
         /// </summary>
-        public static bool IsHook(IMethodSymbol method)
+         public static bool IsHook(IMethodSymbol method)
         {
-            if (
-                method == null
-                || method.ContainingType == null
-                || !HooksUtils.IsRustClass(method.ContainingType)
-                || method.IsStatic
-            )
+            if (method == null || !HooksUtils.IsRustClass(method.ContainingType))
                 return false;
 
-            var methodSignature = HooksUtils.GetMethodSignature(method);
-            if (methodSignature == null)
-                return false;
+            var sig = HooksUtils.GetMethodSignature(method);
 
-            return _hooks.Any(s => 
-                s.Signature.Name == methodSignature.Name &&
-                s.Signature.Parameters.Count == methodSignature.Parameters.Count &&
-                s.Signature.Parameters.Select(p => p.Type)
-                    .SequenceEqual(methodSignature.Parameters.Select(p => p.Type))
-            );
+            if (sig == null || 
+                sig.Name != method.Name ||
+                sig.Parameters.Count != method.Parameters.Length)
+            {
+                return false;
+            }
+
+            var matchingHooks = _hooks.Where(h => 
+                h.Signature.Name == method.Name && 
+                h.Signature.Parameters.Count == method.Parameters.Length &&
+                sig.Parameters.Select((p, i) => new { 
+                    Index = i,
+                    Expected = p.Type, 
+                    ExpectedName = p.Name,
+                    Actual = method.Parameters[i].Type,
+                    ActualName = method.Parameters[i].Name,
+                    // Проверяем только соответствие типов, игнорируем имена параметров
+                    IsCompatible = HooksConfiguration.IsTypeCompatible(method.Parameters[i].Type, p.Type, method)
+                }).All(x => x.IsCompatible)
+            ).Any();
+
+            return matchingHooks;
         }
 
         /// <summary>
