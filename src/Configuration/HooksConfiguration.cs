@@ -62,6 +62,10 @@ namespace RustAnalyzer
                 return false;
 
             var sig = HooksUtils.GetMethodSignature(method);
+            
+            // Найден ли подходящий хук в конфигурации
+            var matchingHooks = _hooks.Where(h => h.Signature.Name == method.Name).ToList();
+            
             if (sig == null ||
                 sig.Name != method.Name ||
                 sig.Parameters.Count != method.Parameters.Length)
@@ -69,9 +73,20 @@ namespace RustAnalyzer
                 return false;
             }
 
-            return sig.Parameters
-                .Select((p, i) => new { Expected = p.Type, Actual = method.Parameters[i].Type })
-                .All(x => IsTypeCompatible(x.Actual, x.Expected, method));
+            // Проверяем совместимость каждого параметра - только по типам, игнорируем имена
+            var paramResults = sig.Parameters.Select((p, i) => new { 
+                Index = i,
+                Expected = p.Type, 
+                ExpectedName = p.Name,
+                Actual = method.Parameters[i].Type,
+                ActualName = method.Parameters[i].Name,
+                // Проверяем только соответствие типов, игнорируем имена параметров
+                IsCompatible = IsTypeCompatible(method.Parameters[i].Type, p.Type, method)
+            }).ToList();
+            
+            bool isCompatible = paramResults.All(x => x.IsCompatible);
+            
+            return isCompatible;
         }
 
         /// <summary>
@@ -113,17 +128,66 @@ namespace RustAnalyzer
         /// </summary>
         private static bool IsTypeCompatible(ITypeSymbol actualType, string expectedName, IMethodSymbol context)
         {
+            // Общая обработка для массивов
+            if (actualType is IArrayTypeSymbol arrayType)
+            {
+                // Если ожидаемый тип тоже массив
+                if (expectedName.EndsWith("[]"))
+                {
+                    string expectedElementTypeName = expectedName.Substring(0, expectedName.Length - 2);
+                    // Если это имя с пространством имен, получаем простое имя
+                    if (expectedElementTypeName.Contains("."))
+                    {
+                        expectedElementTypeName = expectedElementTypeName.Substring(expectedElementTypeName.LastIndexOf('.') + 1);
+                    }
+                    
+                    return IsTypeCompatible(arrayType.ElementType, expectedElementTypeName, context);
+                }
+            }
+            
             var normExpected = NormalizeTypeName(expectedName);
             var normActual   = NormalizeTypeName(actualType.Name);
+            
+            // Извлекаем имя типа без пространства имен для сравнения
+            string expectedSimpleName = expectedName;
+            string actualSimpleName = actualType.Name;
+            
+            // Удаляем пространства имен, если они есть
+            if (expectedName.Contains("."))
+            {
+                expectedSimpleName = expectedName.Substring(expectedName.LastIndexOf('.') + 1);
+            }
+            
+            // Прямое сравнение имен типов без учета пространств имен
+            if (string.Equals(expectedSimpleName, actualSimpleName, StringComparison.Ordinal))
+            {
+                return true;
+            }
 
             // actual → expected
-            if (IsOrDerivesFrom(actualType, normExpected))
+            bool actualDerivesFromExpected = IsOrDerivesFrom(actualType, normExpected);
+            
+            if (actualDerivesFromExpected)
                 return true;
 
             // expected → actual
             var expectedSym = FindTypeByName(normExpected, context);
-            if (expectedSym != null && IsOrDerivesFrom(expectedSym, normActual))
+            
+            bool expectedDerivesFromActual = false;
+            if (expectedSym != null)
+            {
+                expectedDerivesFromActual = IsOrDerivesFrom(expectedSym, normActual);
+            }
+            
+            if (expectedDerivesFromActual)
                 return true;
+
+            // Специальная проверка совместимости для string и String
+            if ((normExpected == "string" && normActual == "String") || 
+                (normExpected == "String" && normActual == "string"))
+            {
+                return true;
+            }
 
             return false;
         }
@@ -147,11 +211,40 @@ namespace RustAnalyzer
         /// </summary>
         private static bool IsOrDerivesFrom(ITypeSymbol type, string name)
         {
+            // Извлекаем имя типа без пространства имен для сравнения
+            string simpleTypeName = name;
+            if (name.Contains("."))
+            {
+                simpleTypeName = name.Substring(name.LastIndexOf('.') + 1);
+            }
+            
+            // Общая обработка для массивов
+            if (type is IArrayTypeSymbol arrayType && name.EndsWith("[]"))
+            {
+                string elementTypeName = name.Substring(0, name.Length - 2);
+                // Если это имя с пространством имен, получаем простое имя
+                if (elementTypeName.Contains("."))
+                {
+                    elementTypeName = elementTypeName.Substring(elementTypeName.LastIndexOf('.') + 1);
+                }
+                return IsOrDerivesFrom(arrayType.ElementType, elementTypeName);
+            }
+            
             for (var t = type; t != null; t = t.BaseType)
             {
+                // Проверяем полное имя
                 if (string.Equals(t.Name, name, StringComparison.Ordinal))
+                {
                     return true;
+                }
+                
+                // Проверяем простое имя
+                if (string.Equals(t.Name, simpleTypeName, StringComparison.Ordinal))
+                {
+                    return true;
+                }
             }
+            
             return false;
         }
 
@@ -160,6 +253,19 @@ namespace RustAnalyzer
         /// </summary>
         private static ITypeSymbol? FindTypeByName(string typeName, IMethodSymbol method)
         {
+            // Специальная обработка для массивов
+            if (typeName.EndsWith("[]"))
+            {
+                string elementTypeName = typeName.Substring(0, typeName.Length - 2);
+                
+                // Для string[] делаем особую обработку, так как это часто встречающийся тип
+                if (elementTypeName.Equals("string", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Считаем, что строковые массивы всегда совместимы
+                    return null; // Возвращаем null, но в IsTypeCompatible добавим особую обработку
+                }
+            }
+            
             var visited = new HashSet<INamespaceSymbol>(SymbolEqualityComparer.Default);
             var queue   = new Queue<INamespaceSymbol>();
             queue.Enqueue(method.ContainingAssembly.GlobalNamespace);
@@ -172,7 +278,9 @@ namespace RustAnalyzer
                 foreach (var t in ns.GetTypeMembers())
                 {
                     if (t.Name == typeName)
+                    {
                         return t;
+                    }
                 }
                 foreach (var child in ns.GetNamespaceMembers())
                 {
@@ -194,7 +302,9 @@ namespace RustAnalyzer
                         foreach (var t in ns.GetTypeMembers())
                         {
                             if (t.Name == typeName)
+                            {
                                 return t;
+                            }
                         }
                         foreach (var child in ns.GetNamespaceMembers())
                         {
