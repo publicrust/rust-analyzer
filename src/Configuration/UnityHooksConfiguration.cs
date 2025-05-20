@@ -22,7 +22,7 @@ namespace RustAnalyzer
                 var hooks = UnityHooksJson.GetHooks();
                 _hooks = ImmutableList.CreateRange(hooks);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 _hooks = ImmutableList<MethodSignatureModel>.Empty;
             }
@@ -50,8 +50,22 @@ namespace RustAnalyzer
             if (methodSignature == null)
                 return false;
 
-            // ��������� ������� ���� � ����� ������
-            return _hooks.Any(s => s.Name == methodSignature.Name);
+            // Проверяем наличие хуков с таким именем и совместимостью параметров
+            var matchingHooks = _hooks.Where(h => 
+                h.Name == methodSignature.Name && 
+                h.Parameters.Count == methodSignature.Parameters.Count &&
+                methodSignature.Parameters.Select((p, i) => new { 
+                    Index = i,
+                    Expected = p.Type, 
+                    ExpectedName = p.Name,
+                    Actual = h.Parameters[i].Type,
+                    ActualName = h.Parameters[i].Name,
+                    // Проверяем только соответствие типов, игнорируем имена параметров
+                    IsCompatible = HooksConfiguration.IsTypeCompatible(method.Parameters[i].Type, p.Type, method)
+                }).All(x => x.IsCompatible)
+            ).Any();
+
+            return matchingHooks;
         }
 
         /// <summary>
