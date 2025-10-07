@@ -7,7 +7,7 @@
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <DevelopmentDependency>false</DevelopmentDependency>
     <NoPackageAnalysis>false</NoPackageAnalysis>
-    <SuppressDependenciesWhenPacking>false</SuppressDependenciesWhenPacking>
+    <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
     <AnalyzerRoslynVersion>4.7.0</AnalyzerRoslynVersion>
     <LangVersion>latest</LangVersion>
     <IsPackable>true</IsPackable>
@@ -21,13 +21,14 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
     <GenerateTargetFrameworkAttribute>false</GenerateTargetFrameworkAttribute>
     <PackageReadmeFile>README.md</PackageReadmeFile>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp" Version="4.7.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="4.7.0" PrivateAssets="all" />
     <PackageReference Include="Microsoft.CodeAnalysis.Analyzers" Version="3.3.4" PrivateAssets="all" />
-    <PackageReference Include="System.Text.Json" Version="8.0.0" />
+    <PackageReference Include="System.Text.Json" Version="8.0.0" PrivateAssets="all" GeneratePathProperty="true" />
 
     <PackageReference Include="SuggestMembersAnalyzer" Version="1.0.3">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
@@ -35,13 +36,19 @@
     </PackageReference>
   </ItemGroup>
 
-
   <ItemGroup>
-    <None Include="bin\$(Configuration)\$(TargetFramework)\rust-analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/" />
+    <None Include="README.md" Pack="true" PackagePath="" />
+    <None Include="$(TargetPath)" Pack="true" PackagePath="analyzers/dotnet/cs/" />
+    <None Include="$(OutputPath)$(TargetName).pdb" Pack="true" PackagePath="analyzers/dotnet/cs/" Condition="Exists('$(OutputPath)$(TargetName).pdb')" />
+    <None Include="$(PkgSystem_Text_Json)/lib/netstandard2.0/System.Text.Json.dll" Pack="true" PackagePath="analyzers/dotnet/cs/" Condition="Exists('$(PkgSystem_Text_Json)/lib/netstandard2.0/System.Text.Json.dll')" />
   </ItemGroup>
 
-  <ItemGroup>
-    <None Include="README.md" Pack="true" PackagePath="\"/>
-  </ItemGroup>
+  <Target Name="CreateLibPlaceholder" BeforeTargets="Pack">
+    <MakeDir Directories="$(BaseIntermediateOutputPath)lib/netstandard2.0" />
+    <WriteLinesToFile File="$(BaseIntermediateOutputPath)lib/netstandard2.0/_._" Lines="" Overwrite="true" />
+    <ItemGroup>
+      <None Include="$(BaseIntermediateOutputPath)lib/netstandard2.0/_._" Pack="true" PackagePath="lib/netstandard2.0/" />
+    </ItemGroup>
+  </Target>
 
 </Project>
