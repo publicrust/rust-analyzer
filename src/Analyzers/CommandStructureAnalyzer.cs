@@ -173,20 +173,66 @@ namespace RustAnalyzer.Analyzers
 
         private bool IsMatchingType(ITypeSymbol actualType, string expectedType)
         {
+            if (actualType is IArrayTypeSymbol arrayType)
+            {
+                if (!expectedType.EndsWith("[]", StringComparison.Ordinal))
+                    return false;
+
+                var expectedElementType = expectedType.Substring(0, expectedType.Length - 2);
+                return IsMatchingType(arrayType.ElementType, expectedElementType);
+            }
+
+            if (actualType is INamedTypeSymbol namedType)
+            {
+                if (string.Equals(namedType.Name, expectedType, StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                if (!namedType.ContainingNamespace.IsGlobalNamespace)
+                {
+                    var fullName = $"{namedType.ContainingNamespace.ToDisplayString()}.{namedType.Name}";
+                    if (
+                        string.Equals(fullName, expectedType, StringComparison.OrdinalIgnoreCase)
+                        || fullName.EndsWith($".{expectedType}", StringComparison.OrdinalIgnoreCase)
+                    )
+                    {
+                        return true;
+                    }
+                }
+            }
+
             var actualTypeName = actualType.ToDisplayString();
 
-            // Обрабатываем специальные случаи
-            if (expectedType == "ConsoleSystem.Arg" && actualTypeName.EndsWith("ConsoleSystem.Arg"))
+            if (
+                expectedType == "ConsoleSystem.Arg"
+                && actualTypeName.EndsWith("ConsoleSystem.Arg", StringComparison.OrdinalIgnoreCase)
+            )
+            {
+                return true;
+            }
+
+            if (string.Equals(actualTypeName, expectedType, StringComparison.OrdinalIgnoreCase))
                 return true;
 
-            // Проверяем точное совпадение или полное имя типа
-            var result =
-                actualTypeName == expectedType
-                || actualTypeName == $"global::{expectedType}"
-                || actualTypeName == $"Oxide.Game.Rust.Libraries.{expectedType}"
-                || actualTypeName == $"Oxide.Core.Libraries.{expectedType}";
+            if (string.Equals(actualTypeName, $"global::{expectedType}", StringComparison.OrdinalIgnoreCase))
+                return true;
 
-            return result;
+            if (
+                string.Equals(
+                    actualTypeName,
+                    $"Oxide.Game.Rust.Libraries.{expectedType}",
+                    StringComparison.OrdinalIgnoreCase
+                )
+                || string.Equals(
+                    actualTypeName,
+                    $"Oxide.Core.Libraries.{expectedType}",
+                    StringComparison.OrdinalIgnoreCase
+                )
+            )
+            {
+                return true;
+            }
+
+            return false;
         }
 
         private bool HasCommandAttribute(IMethodSymbol method, string attributeName)
