@@ -1,5 +1,4 @@
 using System;
-using System.Linq;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.Text;
 
@@ -24,17 +23,6 @@ namespace RustAnalyzer.Utils
             var lineSpan = info.Location.GetLineSpan();
             var startLinePosition = lineSpan.StartLinePosition;
 
-            var lineText = info.SourceText.Lines[startLinePosition.Line].ToString();
-            lineText = TextAlignmentUtils.ExpandTabs(lineText, 4);
-
-            int charColumn = startLinePosition.Character;
-            string pointerLine = TextAlignmentUtils.CreatePointerLine(
-                lineText,
-                charColumn,
-                info.Location.SourceSpan.Length,
-                4
-            );
-
             var fileName = System.IO.Path.GetFileName(
                 info.Location.SourceTree?.FilePath ?? string.Empty
             );
@@ -45,18 +33,15 @@ namespace RustAnalyzer.Utils
             messageBuilder.AppendFormat("error[{0}]: {1}\n", info.ErrorCode, info.ErrorTitle);
 
             // Информация о расположении
-            messageBuilder.AppendFormat(
-                "  --> {0}:{1}:{2}\n",
-                fileName,
-                startLinePosition.Line + 1,
-                charColumn + 1
-            );
-
-            // Показ кода с указателем на ошибку
-            messageBuilder.AppendLine("   |");
-            messageBuilder.AppendFormat("{0,4} | {1}\n", startLinePosition.Line + 1, lineText);
-            messageBuilder.AppendFormat("   | {0}\n", pointerLine);
-            messageBuilder.AppendLine("   |");
+            if (!string.IsNullOrEmpty(fileName))
+            {
+                messageBuilder.AppendFormat(
+                    "   at {0}:{1}:{2}\n",
+                    fileName,
+                    startLinePosition.Line + 1,
+                    startLinePosition.Character + 1
+                );
+            }
 
             // Дополнительная информация
             if (!string.IsNullOrEmpty(info.Note))
